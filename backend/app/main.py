@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, topics
+from .routers import auth, topics, tasks
 from .database import engine, Base
 
 # Создание таблиц в БД
@@ -24,6 +24,7 @@ app.add_middleware(
 # Подключение роутеров
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Аутентификация"])
 app.include_router(topics.router, prefix="/api/v1/topics", tags=["Учебный контент"])
+app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["Задачи"])
 
 @app.get("/")
 def root():
