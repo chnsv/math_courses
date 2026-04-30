@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, topics, tasks, stats
+from .routers import auth, topics, tasks, stats, admin
 from .database import engine, Base
 
 # Создание таблиц в БД
@@ -26,6 +26,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Аутентифи
 app.include_router(topics.router, prefix="/api/v1/topics", tags=["Учебный контент"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["Задачи"])
 app.include_router(stats.router, prefix="/api/v1/stats", tags=["Статистика"])
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["Администрирование"])
 
 @app.get("/")
 def root():
