@@ -20,10 +20,7 @@ def get_tasks(
         task_type: Optional[str] = Query(None, description="Тип задачи: test, numeric, equation"),
         db: Session = Depends(get_db)
 ):
-    """
-    Получение списка задач по теме.
-    Если указан task_type, возвращаются только задачи этого типа.
-    """
+
     query = db.query(models.Task).filter(models.Task.topic_id == topic_id)
 
     if task_type:
@@ -40,7 +37,6 @@ def get_tasks(
             "difficulty": task.difficulty
         }
 
-        # Для тестовых заданий добавляем варианты ответов
         if task.type == 'test':
             options = db.query(models.TestOption).filter(
                 models.TestOption.task_id == task.id
@@ -61,21 +57,15 @@ def submit_attempt(
         attempt_data: schemas.TaskAttemptRequest,
         db: Session = Depends(get_db)
 ):
-    """
-    Отправка ответа на задачу.
-    Проверяет правильность, начисляет XP, сохраняет попытку.
-    """
-    # Получаем задачу из БД
+
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Проверка ответа в зависимости от типа задачи
     is_correct = False
     explanation = ""
 
     if task.type == 'test':
-        # Для тестов: сравниваем с правильным вариантом
         correct_option = db.query(models.TestOption).filter(
             models.TestOption.task_id == task_id,
             models.TestOption.is_correct == True
@@ -89,7 +79,6 @@ def submit_attempt(
         explanation = task.solution_explanation or "Правильный ответ: " + task.correct_answer
 
     elif task.type == 'numeric':
-        # Для числовых задач: сравниваем с учётом погрешности
         try:
             user_val = float(attempt_data.user_answer.replace(',', '.'))
             correct_val = float(task.correct_answer.replace(',', '.'))
@@ -101,17 +90,17 @@ def submit_attempt(
             explanation = "✓ Верный ответ!"
         else:
             explanation = f"✗ Неверно. Правильный ответ: {task.correct_answer}"
-
     elif task.type == 'equation':
-        # Для уравнений: используем SymPy (пока заглушка)
-        # ПОЗЖЕ ЗДЕСЬ БУДЕТ ВЫЗОВ services.equation_checker.check_equation
-        # Пока временная проверка
-        if attempt_data.user_answer.strip() == task.correct_answer.strip():
-            is_correct = True
-            explanation = "✓ Уравнение решено верно!"
-        else:
+        # Для уравнений: используем SymPy
+        try:
+            from ..services.equation_checker import check_equation
+            is_correct, explanation, _ = check_equation(
+                task.question_text,
+                attempt_data.user_answer
+            )
+        except Exception as e:
             is_correct = False
-            explanation = f"✗ Неверно. Правильное решение: {task.solution_explanation or task.correct_answer}"
+            explanation = f"Ошибка при проверке уравнения: {str(e)}"
     else:
         is_correct = False
 
