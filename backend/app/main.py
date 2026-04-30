@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth, topics, tasks, stats, admin, sympy
 from .database import engine, Base
 
-# Создание таблиц в БД
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -12,13 +11,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Настройка CORS
+# Настройка CORS — РАЗРЕШАЕМ ВСЁ ДЛЯ РАЗРАБОТКИ
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["*"],  # Временно разрешаем все источники
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Разрешаем все методы (включая OPTIONS)
+    allow_headers=["*"],  # Разрешаем все заголовки
 )
 
 # Подключение роутеров
