@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import AuthModal from './AuthModal';
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
@@ -35,7 +37,6 @@ const Header: React.FC = () => {
     return (
         <>
             <style>{`
-                /* Десктопная версия */
                 @media (min-width: 769px) {
                     .desktop-nav {
                         display: flex !important;
@@ -47,8 +48,6 @@ const Header: React.FC = () => {
                         display: none !important;
                     }
                 }
-
-                /* Мобильная версия */
                 @media (max-width: 768px) {
                     .desktop-nav {
                         display: none !important;
@@ -75,14 +74,12 @@ const Header: React.FC = () => {
                     maxWidth: '1200px',
                     margin: '0 auto'
                 }}>
-                    {/* Логотип */}
                     <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '24px', fontWeight: 'bold' }}>
                         📐 MathCourse
                     </Link>
 
                     {/* Десктопная навигация */}
                     <nav className="desktop-nav" style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
-                        {/* Выпадающее меню */}
                         <div style={{ position: 'relative' }}>
                             <button
                                 onClick={handleDropdownClick}
@@ -152,9 +149,21 @@ const Header: React.FC = () => {
                                 </button>
                             </div>
                         ) : (
-                            <Link to="/login" style={{ color: 'white', textDecoration: 'none' }}>
+                            <button
+                                onClick={() => {
+                                    console.log('🔴 Кнопка Войти нажата!');
+                                    setIsAuthModalOpen(true);
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '16px',
+                                    cursor: 'pointer'
+                                }}
+                            >
                                 Войти
-                            </Link>
+                            </button>
                         )}
                     </nav>
 
@@ -175,7 +184,7 @@ const Header: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Мобильное меню (открывается при клике на бургер) */}
+                {/* Мобильное меню */}
                 {isMenuOpen && (
                     <div className="mobile-menu" style={{
                         display: 'flex',
@@ -223,13 +232,30 @@ const Header: React.FC = () => {
                                 </button>
                             </>
                         ) : (
-                            <Link to="/login" style={{ color: 'white', textDecoration: 'none', padding: '8px 0' }} onClick={() => setIsMenuOpen(false)}>
+                            <button
+                                onClick={() => {
+                                    console.log('🔴 Кнопка Войти нажата (мобильное меню)');
+                                    setIsAuthModalOpen(true);
+                                    setIsMenuOpen(false);
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'white',
+                                    padding: '8px 0',
+                                    cursor: 'pointer',
+                                    textAlign: 'left'
+                                }}
+                            >
                                 Войти
-                            </Link>
+                            </button>
                         )}
                     </div>
                 )}
             </header>
+
+            {/* Модальное окно авторизации */}
+            <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
         </>
     );
 };
