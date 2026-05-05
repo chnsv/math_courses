@@ -54,18 +54,17 @@ def check_equation_endpoint(request: EquationCheckRequest):
 
 
 @router.post("/generate-variant")
-def generate_variant_endpoint(task_id: int, db: Session = Depends(get_db)):
-    """Генерация уникального варианта задачи (ФТ 6.3)"""
-    # Получаем задачу из БД
+def generate_variant_endpoint(
+        task_id: int,
+        db: Session = Depends(get_db)
+):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Проверяем, поддерживает ли задача генерацию вариантов
     if not task.parameters:
         raise HTTPException(status_code=400, detail="Task does not support variant generation")
 
-    # Генерируем вариант
     question_text, params_used, correct_answer = generate_variant(
         task.question_text,
         task.parameters
