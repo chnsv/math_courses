@@ -28,4 +28,12 @@ api.interceptors.response.use(
     }
 );
 
+export const tasksApi = {
+    getTasks: (topicId: number) => api.get(`/tasks?topic_id=${topicId}`),
+    submitAttempt: (taskId: number, userAnswer: string) =>
+        api.post(`/tasks/${taskId}/attempt`, { user_answer: userAnswer }),
+    checkEquation: (equation: string, userAnswer: string) =>
+        api.post('/sympy/check-equation', { equation, user_answer: userAnswer }),
+};
+
 export default api;

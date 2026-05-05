@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import TopicsPage from './pages/TopicsPage';
+import TasksPage from './pages/TasksPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, loading } = useAuth();
@@ -22,6 +23,14 @@ function AppRoutes() {
                 element={
                     <PrivateRoute>
                         <TopicsPage />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/topic/:id/tasks"
+                element={
+                    <PrivateRoute>
+                        <TasksPage />
                     </PrivateRoute>
                 }
             />
