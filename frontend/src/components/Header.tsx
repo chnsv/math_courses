@@ -25,13 +25,13 @@ const Header: React.FC = () => {
     };
 
     const menuItems = [
-        { label: 'Математика 5-6 класс', link: '/topics?level=5-6' },
-        { label: 'Алгебра 7-8 класс', link: '/topics?level=7-8-algebra' },
-        { label: 'Геометрия 7-8 класс', link: '/topics?level=7-8-geometry' },
-        { label: 'Подготовка ОГЭ', link: '/topics?level=oge' },
-        { label: 'Подготовка ЕГЭ', link: '/topics?level=ege' },
-        { label: 'Пробники ОГЭ', link: '/tests/oge' },
-        { label: 'Пробники ЕГЭ', link: '/tests/ege' },
+        { label: 'Математика 5-6 класс', link: '/math-5-6' },
+        { label: 'Алгебра 7-8 класс', link: '/algebra-7-8' },
+        { label: 'Геометрия 7-8 класс', link: '/geometry-7-8' },
+        { label: 'Подготовка ОГЭ', link: '/oge' },
+        { label: 'Подготовка ЕГЭ', link: '/ege' },
+        { label: 'Пробники ОГЭ', link: '/trial-oge' },
+        { label: 'Пробники ЕГЭ', link: '/trial-ege' },
     ];
 
     return (
@@ -78,7 +78,6 @@ const Header: React.FC = () => {
                         📐 MathCourse
                     </Link>
 
-                    {/* Десктопная навигация */}
                     <nav className="desktop-nav" style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
                         <div style={{ position: 'relative' }}>
                             <button
@@ -151,7 +150,6 @@ const Header: React.FC = () => {
                         ) : (
                             <button
                                 onClick={() => {
-                                    console.log('🔴 Кнопка Войти нажата!');
                                     setIsAuthModalOpen(true);
                                 }}
                                 style={{
@@ -167,7 +165,6 @@ const Header: React.FC = () => {
                         )}
                     </nav>
 
-                    {/* Кнопка бургер-меню для мобильных устройств */}
                     <button
                         className="mobile-menu-btn"
                         onClick={handleMenuClick}
@@ -184,7 +181,6 @@ const Header: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Мобильное меню */}
                 {isMenuOpen && (
                     <div className="mobile-menu" style={{
                         display: 'flex',
@@ -234,7 +230,6 @@ const Header: React.FC = () => {
                         ) : (
                             <button
                                 onClick={() => {
-                                    console.log('🔴 Кнопка Войти нажата (мобильное меню)');
                                     setIsAuthModalOpen(true);
                                     setIsMenuOpen(false);
                                 }}
