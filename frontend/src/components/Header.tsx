@@ -13,6 +13,7 @@ const Header: React.FC = () => {
     const handleLogout = () => {
         logout();
         navigate('/');
+        setIsMenuOpen(false);
     };
 
     const handleMenuClick = () => {
@@ -74,11 +75,14 @@ const Header: React.FC = () => {
                     maxWidth: '1200px',
                     margin: '0 auto'
                 }}>
+                    {/* Логотип */}
                     <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '24px', fontWeight: 'bold' }}>
                         📐 MathCourse
                     </Link>
 
+                    {/* Десктопная навигация */}
                     <nav className="desktop-nav" style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
+                        {/* Выпадающее меню */}
                         <div style={{ position: 'relative' }}>
                             <button
                                 onClick={handleDropdownClick}
@@ -149,9 +153,7 @@ const Header: React.FC = () => {
                             </div>
                         ) : (
                             <button
-                                onClick={() => {
-                                    setIsAuthModalOpen(true);
-                                }}
+                                onClick={() => setIsAuthModalOpen(true)}
                                 style={{
                                     background: 'none',
                                     border: 'none',
@@ -165,6 +167,7 @@ const Header: React.FC = () => {
                         )}
                     </nav>
 
+                    {/* Кнопка бургер-меню для мобильных устройств */}
                     <button
                         className="mobile-menu-btn"
                         onClick={handleMenuClick}
@@ -181,6 +184,7 @@ const Header: React.FC = () => {
                     </button>
                 </div>
 
+                {/* Мобильное меню */}
                 {isMenuOpen && (
                     <div className="mobile-menu" style={{
                         display: 'flex',
@@ -207,7 +211,7 @@ const Header: React.FC = () => {
                         {user ? (
                             <>
                                 <Link to="/profile" style={{ color: 'white', textDecoration: 'none', padding: '8px 0' }} onClick={() => setIsMenuOpen(false)}>
-                                    👤 Личный кабинет
+                                    👤 {user.full_name?.split(' ')[0] || user.email}
                                 </Link>
                                 <button
                                     onClick={() => {

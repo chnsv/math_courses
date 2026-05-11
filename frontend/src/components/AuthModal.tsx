@@ -12,6 +12,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
     const [className, setClassName] = useState('');
+    const [role, setRole] = useState('student');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { login, register } = useAuth();
@@ -27,14 +28,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             if (isLogin) {
                 await login(email, password);
             } else {
-                await register({ email, password, full_name: fullName, class_name: className });
+                await register({ email, password, full_name: fullName, class_name: className, role });
             }
             onClose();
-            // Очищаем форму
             setEmail('');
             setPassword('');
             setFullName('');
             setClassName('');
+            setRole('student');
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Ошибка');
         } finally {
@@ -44,22 +45,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
     return (
         <>
-            {/* Затемнение фона */}
-            <div
-                onClick={onClose}
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    zIndex: 1000,
-                    animation: 'fadeIn 0.2s ease'
-                }}
-            />
+            <div onClick={onClose} style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                zIndex: 1000,
+            }} />
 
-            {/* Модальное окно */}
             <div style={{
                 position: 'fixed',
                 top: '50%',
@@ -72,7 +67,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 maxWidth: '450px',
                 zIndex: 1001,
                 boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                animation: 'slideIn 0.3s ease'
+                maxHeight: '90vh',
+                overflow: 'auto'
             }}>
                 <button
                     onClick={onClose}
@@ -171,6 +167,25 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                                     fontSize: '16px'
                                 }}
                             />
+
+                            {/* Выбор роли при регистрации */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Регистрируюсь как:</label>
+                                <div style={{ display: 'flex', gap: '15px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                        <input type="radio" value="student" checked={role === 'student'} onChange={(e) => setRole(e.target.value)} />
+                                        Ученик
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                        <input type="radio" value="teacher" checked={role === 'teacher'} onChange={(e) => setRole(e.target.value)} />
+                                        Учитель
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                        <input type="radio" value="admin" checked={role === 'admin'} onChange={(e) => setRole(e.target.value)} />
+                                        Администратор
+                                    </label>
+                                </div>
+                            </div>
                         </>
                     )}
 
@@ -212,24 +227,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     </button>
                 </p>
             </div>
-
-            {/* Добавляем анимации */}
-            <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translate(-50%, -45%);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translate(-50%, -50%);
-                    }
-                }
-            `}</style>
         </>
     );
 };

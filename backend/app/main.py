@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, topics, tasks, stats, admin, sympy
+from .routers import auth, topics, tasks, stats, admin, sympy, users
 from .database import engine, Base
 
 Base.metadata.create_all(bind=engine)
@@ -27,6 +27,7 @@ app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["Задачи"])
 app.include_router(stats.router, prefix="/api/v1/stats", tags=["Статистика"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Администрирование"])
 app.include_router(sympy.router, prefix="/api/v1/sympy", tags=["SymPy (уникальные функции)"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["Пользователи"])
 
 @app.get("/")
 def root():

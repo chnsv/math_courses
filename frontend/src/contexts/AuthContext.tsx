@@ -9,13 +9,14 @@ interface User {
     role: string;
     xp: number;
     level: number;
+    created_at?: string;
 }
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (data: any) => Promise<void>;
+    register: (userData: any) => Promise<void>;
     logout: () => void;
 }
 
