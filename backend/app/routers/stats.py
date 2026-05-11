@@ -25,7 +25,7 @@ def get_progress(
     # Количество правильных ответов
     correct_attempts = db.query(models.TaskAttempt).filter(
         models.TaskAttempt.user_id == user_id,
-        models.TaskAttempt.is_correct == True 
+        models.TaskAttempt.is_correct == True
     ).count()
 
     # XP до следующего уровня

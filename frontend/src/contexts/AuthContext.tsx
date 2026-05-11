@@ -6,9 +6,10 @@ interface User {
     email: string;
     full_name: string;
     class_name: string;
-    role: string;
+    role: string;  // 'student', 'teacher', 'admin'
     xp: number;
     level: number;
+    avatar_url?: string;
     created_at?: string;
 }
 
@@ -18,6 +19,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     register: (userData: any) => Promise<void>;
     logout: () => void;
+    updateUser: (data: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,9 +33,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('user');
         if (token && savedUser) {
             try {
-                setUser(JSON.parse(savedUser));
+                const parsedUser = JSON.parse(savedUser);
+                console.log('Загружен пользователь из localStorage:', parsedUser);
+                setUser(parsedUser);
             } catch (e) {
                 console.error('Ошибка парсинга user', e);
+                localStorage.removeItem('user');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
             }
         }
         setLoading(false);
@@ -42,6 +49,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = async (email: string, password: string) => {
         const response = await api.post('/auth/login', { email, password });
         const { access_token, refresh_token, user } = response.data;
+
+        console.log('Логин получен пользователь:', user);
+        console.log('Роль пользователя:', user.role);
+
         localStorage.setItem('access_token', access_token);
         localStorage.setItem('refresh_token', refresh_token);
         localStorage.setItem('user', JSON.stringify(user));
@@ -49,7 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const register = async (userData: any) => {
-        await api.post('/auth/register', userData);
+        console.log('Регистрация с данными:', userData);
+        const response = await api.post('/auth/register', userData);
+        console.log('Ответ регистрации:', response.data);
+
+        // После регистрации сразу логинимся
         await login(userData.email, userData.password);
     };
 
@@ -60,8 +75,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
     };
 
+    const updateUser = (data: Partial<User>) => {
+        if (user) {
+            const updatedUser = { ...user, ...data };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

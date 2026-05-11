@@ -23,19 +23,22 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     hashed_password = services.auth_service.hash_password(user_data.password)
 
     # Создание нового пользователя в БД
+    # Берём роль из user_data.role, если не передана — по умолчанию "student"
+    user_role = user_data.role if hasattr(user_data, 'role') and user_data.role else "student"
+
     new_user = models.User(
         email=user_data.email,
         password_hash=hashed_password,
         full_name=user_data.full_name,
         class_name=user_data.class_name,
-        role="student",
+        role=user_role,
         xp=0,
         level=1
     )
 
     db.add(new_user)
     db.commit()
-    db.refresh(new_user)  # Загружаем сгенерированные поля (id, created_at)
+    db.refresh(new_user)
 
     return new_user
 
