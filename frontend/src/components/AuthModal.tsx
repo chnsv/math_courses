@@ -153,22 +153,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                                     fontSize: '16px'
                                 }}
                             />
-                            <input
-                                type="text"
-                                placeholder="Класс (например, 11А)"
-                                value={className}
-                                onChange={(e) => setClassName(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    marginBottom: '16px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '8px',
-                                    fontSize: '16px'
-                                }}
-                            />
 
-                            {/* Выбор роли при регистрации */}
+                            {!isLogin && role === 'student' && (
+                                <input
+                                    type="text"
+                                    placeholder="Класс (например, 11А)"
+                                    value={className}
+                                    onChange={(e) => setClassName(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        marginBottom: '16px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '8px',
+                                        fontSize: '16px'
+                                    }}
+                                />
+                            )}
+
                             <div style={{ marginBottom: '16px' }}>
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Регистрируюсь как:</label>
                                 <div style={{ display: 'flex', gap: '15px' }}>

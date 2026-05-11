@@ -1,141 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Optional
 from ..database import get_db
-from .. import models, schemas
+from .. import models
+from ..services.auth_service import get_current_user, hash_password
 
 router = APIRouter()
 
+print("ADMIN.PY is being loaded!")
 
-# ========== УПРАВЛЕНИЕ ТЕМАМИ ==========
-
-@router.post("/topics")
-def create_topic(
-        topic_data: dict,
-        db: Session = Depends(get_db)
-):
-    """Создание новой темы (только для admin/teacher)"""
-    new_topic = models.Topic(
-        title=topic_data.get("title"),
-        description=topic_data.get("description"),
-        parent_id=topic_data.get("parent_id"),
-        order_index=topic_data.get("order_index", 0)
-    )
-    db.add(new_topic)
-    db.commit()
-    db.refresh(new_topic)
-    return new_topic
-
-
-@router.put("/topics/{topic_id}")
-def update_topic(
-        topic_id: int,
-        topic_data: dict,
-        db: Session = Depends(get_db)
-):
-    """Обновление темы"""
-    topic = db.query(models.Topic).filter(models.Topic.id == topic_id).first()
-    if not topic:
-        raise HTTPException(status_code=404, detail="Topic not found")
-
-    for key, value in topic_data.items():
-        if hasattr(topic, key):
-            setattr(topic, key, value)
-
-    db.commit()
-    db.refresh(topic)
-    return topic
-
-
-@router.delete("/topics/{topic_id}")
-def delete_topic(topic_id: int, db: Session = Depends(get_db)):
-    """Удаление темы (каскадно удаляет подтемы и задачи)"""
-    topic = db.query(models.Topic).filter(models.Topic.id == topic_id).first()
-    if not topic:
-        raise HTTPException(status_code=404, detail="Topic not found")
-
-    db.delete(topic)
-    db.commit()
-    return {"message": "Topic deleted successfully"}
-
-
-# ========== УПРАВЛЕНИЕ ЗАДАЧАМИ ==========
-
-@router.post("/tasks")
-def create_task(
-        task_data: schemas.TaskCreate,
-        db: Session = Depends(get_db)
-):
-    """Создание новой задачи"""
-    new_task = models.Task(
-        topic_id=task_data.topic_id,
-        type=task_data.type,
-        question_text=task_data.question_text,
-        correct_answer=task_data.correct_answer,
-        solution_explanation=task_data.solution_explanation,
-        difficulty=task_data.difficulty,
-        parameters=task_data.parameters,
-        order_index=0
-    )
-    db.add(new_task)
-    db.commit()
-    db.refresh(new_task)
-
-    # Если есть варианты ответов для тестового задания
-    if task_data.options:
-        for opt in task_data.options:
-            test_option = models.TestOption(
-                task_id=new_task.id,
-                option_text=opt.text,
-                is_correct=opt.is_correct,
-                order_index=opt.order_index if hasattr(opt, 'order_index') else 0
-            )
-            db.add(test_option)
-        db.commit()
-
-    return new_task
-
-
-@router.put("/tasks/{task_id}")
-def update_task(
-        task_id: int,
-        task_data: schemas.TaskCreate,
-        db: Session = Depends(get_db)
-):
-    """Обновление задачи"""
-    task = db.query(models.Task).filter(models.Task.id == task_id).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    task.topic_id = task_data.topic_id
-    task.type = task_data.type
-    task.question_text = task_data.question_text
-    task.correct_answer = task_data.correct_answer
-    task.solution_explanation = task_data.solution_explanation
-    task.difficulty = task_data.difficulty
-    task.parameters = task_data.parameters
-
-    db.commit()
-    db.refresh(task)
-    return task
-
-
-@router.delete("/tasks/{task_id}")
-def delete_task(task_id: int, db: Session = Depends(get_db)):
-    """Удаление задачи"""
-    task = db.query(models.Task).filter(models.Task.id == task_id).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    # Удаляем связанные варианты ответов
-    db.query(models.TestOption).filter(models.TestOption.task_id == task_id).delete()
-
-    db.delete(task)
-    db.commit()
-    return {"message": "Task deleted successfully"}
-
-
-# ========== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ==========
 
 @router.get("/users")
 def get_users(
@@ -143,9 +16,13 @@ def get_users(
         class_name: Optional[str] = Query(None),
         limit: int = 50,
         offset: int = 0,
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
 ):
-    """Получение списка пользователей с фильтрацией"""
+    """Получение списка пользователей"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     query = db.query(models.User)
 
     if role:
@@ -166,60 +43,130 @@ def get_users(
                 "class_name": u.class_name,
                 "role": u.role,
                 "xp": u.xp,
-                "level": u.level
+                "level": u.level,
+                "created_at": u.created_at
             }
             for u in users
         ]
     }
 
 
+@router.post("/users")
+def create_user(
+        user_data: dict,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Создание нового пользователя"""
+    print(f"Создание пользователя: {user_data}")
+
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    existing_user = db.query(models.User).filter(models.User.email == user_data.get("email")).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    hashed_pwd = hash_password(user_data.get("password", "default123"))
+
+    new_user = models.User(
+        email=user_data.get("email"),
+        password_hash=hashed_pwd,
+        full_name=user_data.get("full_name", ""),
+        class_name=user_data.get("class_name", ""),
+        role=user_data.get("role", "student"),
+        xp=0,
+        level=1
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    print(f"Пользователь создан: id={new_user.id}, email={new_user.email}")
+
+    return {
+        "id": new_user.id,
+        "email": new_user.email,
+        "full_name": new_user.full_name,
+        "class_name": new_user.class_name,
+        "role": new_user.role
+    }
+
+
+@router.delete("/users/{user_id}")
+def delete_user(
+        user_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Удаление пользователя"""
+    print(f"Удаление пользователя с id={user_id}")
+
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db.delete(user)
+    db.commit()
+
+    print(f"Пользователь {user.email} удален")
+
+    return {"message": "User deleted"}
+
+
 @router.put("/users/{user_id}/block")
-def block_user(user_id: int, db: Session = Depends(get_db)):
-    """Блокировка пользователя (установка role = blocked)"""
+def block_user(
+        user_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Блокировка пользователя"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     user.role = "blocked"
     db.commit()
+
     return {"message": f"User {user.email} has been blocked"}
 
 
-# ========== ЭКСПОРТ ОТЧЁТОВ ==========
-
 @router.get("/export")
-def export_stats(
+def export_users(
         class_name: Optional[str] = Query(None),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
 ):
-    """
-    Экспорт статистики класса в формате, готовом для CSV/Excel
-    (возвращает JSON для дальнейшей обработки)
-    """
+    """Экспорт пользователей"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     query = db.query(models.User).filter(models.User.role == "student")
     if class_name:
         query = query.filter(models.User.class_name == class_name)
 
     students = query.all()
 
-    result = []
-    for student in students:
-        # Статистика студента
-        attempts = db.query(models.TaskAttempt).filter(
-            models.TaskAttempt.user_id == student.id
-        ).all()
+    return [
+        {
+            "full_name": s.full_name or s.email,
+            "email": s.email,
+            "class_name": s.class_name,
+            "xp": s.xp,
+            "level": s.level
+        }
+        for s in students
+    ]
 
-        total = len(attempts)
-        correct = sum(1 for a in attempts if a.is_correct)
-
-        result.append({
-            "full_name": student.full_name,
-            "email": student.email,
-            "class": student.class_name,
-            "total_tasks": total,
-            "correct_percent": (correct / total * 100) if total > 0 else 0,
-            "xp": student.xp,
-            "level": student.level
-        })
-
-    return result
+@router.get("/test")
+def test_admin():
+    return {"status": "admin router works"}

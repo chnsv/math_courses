@@ -1,45 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Optional
 from ..database import get_db
-from ..models import Topic, TheoryBlock
+from .. import models
+from ..services.auth_service import get_current_user
 
 router = APIRouter()
 
 
 @router.get("/")
-def get_topics(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
+def get_topics(
+        course_id: Optional[int] = Query(None, description="ID курса для фильтрации"),
+        db: Session = Depends(get_db)
+):
+    """Получение списка тем (с фильтрацией по курсу)"""
+    query = db.query(models.Topic)
+    if course_id:
+        query = query.filter(models.Topic.course_id == course_id)
+    topics = query.order_by(models.Topic.order_index).all()
+    return topics
 
-    root_topics = db.query(Topic).filter(Topic.parent_id.is_(None)).order_by(Topic.order_index).all()
 
-    def build_tree(topic: Topic) -> Dict[str, Any]:
-
-        children = db.query(Topic).filter(Topic.parent_id == topic.id).order_by(Topic.order_index).all()
-
-        return {
-            "id": topic.id,
-            "title": topic.title,
-            "description": topic.description,
-            "children": [build_tree(child) for child in children]
-        }
-
-    return [build_tree(topic) for topic in root_topics]
+@router.get("/{topic_id}")
+def get_topic(topic_id: int, db: Session = Depends(get_db)):
+    """Получение информации о теме по ID"""
+    topic = db.query(models.Topic).filter(models.Topic.id == topic_id).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return topic
 
 
 @router.get("/{topic_id}/theory")
-def get_theory(topic_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
-
-    topic = db.query(Topic).filter(Topic.id == topic_id).first()
-    if not topic:
-        raise HTTPException(status_code=404, detail="Topic not found")
-
-    theory_blocks = db.query(TheoryBlock).filter(
-        TheoryBlock.topic_id == topic_id
-    ).order_by(TheoryBlock.order_index).all()
+def get_theory(topic_id: int, db: Session = Depends(get_db)):
+    """Получение теоретических материалов по теме"""
+    theory_blocks = db.query(models.TheoryBlock).filter(
+        models.TheoryBlock.topic_id == topic_id
+    ).order_by(models.TheoryBlock.order_index).all()
 
     return {
         "topic_id": topic_id,
-        "title": topic.title,
         "blocks": [
             {
                 "id": block.id,
@@ -50,3 +49,70 @@ def get_theory(topic_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
             for block in theory_blocks
         ]
     }
+
+
+@router.post("/{topic_id}/theory")
+def create_theory_block(
+        topic_id: int,
+        theory_data: dict,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Создание блока теории (только для admin)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    new_block = models.TheoryBlock(
+        topic_id=topic_id,
+        title=theory_data.get("title"),
+        content=theory_data.get("content"),
+        order_index=theory_data.get("order_index", 0)
+    )
+    db.add(new_block)
+    db.commit()
+    db.refresh(new_block)
+    return new_block
+
+
+@router.delete("/theory/{block_id}")
+def delete_theory_block(
+        block_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Удаление блока теории (только для admin)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    block = db.query(models.TheoryBlock).filter(models.TheoryBlock.id == block_id).first()
+    if not block:
+        raise HTTPException(status_code=404, detail="Theory block not found")
+
+    db.delete(block)
+    db.commit()
+    return {"message": "Theory block deleted"}
+
+@router.post("/{topic_id}/tasks")
+def create_task(
+        topic_id: int,
+        task_data: dict,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Создание задачи (только для admin)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    new_task = models.Task(
+        topic_id=topic_id,
+        type=task_data.get("type"),
+        question_text=task_data.get("question_text"),
+        correct_answer=task_data.get("correct_answer"),
+        solution_explanation=task_data.get("solution_explanation"),
+        difficulty=task_data.get("difficulty", 1),
+        order_index=task_data.get("order_index", 0)
+    )
+    db.add(new_task)
+    db.commit()
+    db.refresh(new_task)
+    return new_task

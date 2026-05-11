@@ -1,4 +1,5 @@
 from .user import User
+from .course import Course
 from .topic import Topic
 from .theory_block import TheoryBlock
 from .task import Task
@@ -8,12 +9,6 @@ from .achievement import Achievement
 from .user_achievement import UserAchievement
 
 __all__ = [
-    "User",
-    "Topic",
-    "TheoryBlock",
-    "Task",
-    "TestOption",
-    "TaskAttempt",
-    "Achievement",
-    "UserAchievement",
+    "User", "Course", "Topic", "TheoryBlock", "Task",
+    "TestOption", "TaskAttempt", "Achievement", "UserAchievement"
 ]
