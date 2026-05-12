@@ -7,8 +7,11 @@ from .test_option import TestOption
 from .task_attempt import TaskAttempt
 from .achievement import Achievement
 from .user_achievement import UserAchievement
+from .teacher_course import TeacherCourse
+from .test import Test, TestAssignment, TestAttempt
 
 __all__ = [
     "User", "Course", "Topic", "TheoryBlock", "Task",
-    "TestOption", "TaskAttempt", "Achievement", "UserAchievement"
+    "TestOption", "TaskAttempt", "Achievement", "UserAchievement",
+    "TeacherCourse", "Test", "TestAssignment", "TestAttempt"
 ]
