@@ -19,7 +19,7 @@ def get_users(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получение списка пользователей"""
+    """Получение списка пользователей с фильтрацией по классу (частичное совпадение)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -27,8 +27,10 @@ def get_users(
 
     if role:
         query = query.filter(models.User.role == role)
+
     if class_name:
-        query = query.filter(models.User.class_name == class_name)
+        # Используем LIKE для частичного совпадения (регистронезависимо)
+        query = query.filter(models.User.class_name.ilike(f"%{class_name}%"))
 
     total = query.count()
     users = query.offset(offset).limit(limit).all()
