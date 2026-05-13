@@ -81,6 +81,9 @@ const ProfilePage: React.FC = () => {
     const [teacherCourses, setTeacherCourses] = useState<Course[]>([]);
     const [selectedCourseForManage, setSelectedCourseForManage] = useState<Course | null>(null);
 
+    const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+    const [myCourses, setMyCourses] = useState<Course[]>([]);
+
     useEffect(() => {
         if (location.state?.activeTab) {
             setActiveTab(location.state.activeTab);
@@ -96,6 +99,10 @@ const ProfilePage: React.FC = () => {
             }
             if (user.role === 'teacher') {
                 loadTeacherCourses();
+            }
+            if (user.role === 'student') {
+                loadAvailableCourses();
+                loadMyCourses();
             }
         }
     }, [user]);
@@ -273,6 +280,24 @@ const ProfilePage: React.FC = () => {
             } catch (error) {
                 alert('Ошибка удаления');
             }
+        }
+    };
+
+    const loadAvailableCourses = async () => {
+        try {
+            const response = await api.get('/courses/available');
+            setAvailableCourses(response.data);
+        } catch (error) {
+            console.error('Ошибка загрузки доступных курсов:', error);
+        }
+    };
+
+    const loadMyCourses = async () => {
+        try {
+            const response = await api.get('/courses/my-courses');
+            setMyCourses(response.data);
+        } catch (error) {
+            console.error('Ошибка загрузки моих курсов:', error);
         }
     };
 
@@ -630,7 +655,56 @@ const ProfilePage: React.FC = () => {
             {/* Вкладка статистики */}
             {activeTab === 'stats' && stats && (
                 <div>
-                    {/* ... содержимое статистики (оставляем как было) ... */}
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', marginBottom: '30px' }}>
+                        <h2>📊 Сводная статистика</h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                            <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '12px' }}>
+                                <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#e94560' }}>{stats.total_tasks_solved}</div>
+                                <div>Решено задач</div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '12px' }}>
+                                <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#e94560' }}>{stats.total_tasks_correct}</div>
+                                <div>Правильных ответов</div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '12px' }}>
+                                <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#e94560' }}>{stats.average_score}%</div>
+                                <div>Средний балл</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', marginBottom: '30px' }}>
+                        <h2>📈 Прогресс до следующего уровня</h2>
+                        <div style={{ marginBottom: '10px' }}>
+                            <span>Уровень {stats.current_level}</span> → <span>Уровень {stats.current_level + 1}</span>
+                        </div>
+                        <div style={{ width: '100%', height: '20px', backgroundColor: '#e0e0e0', borderRadius: '10px', overflow: 'hidden', margin: '10px 0' }}>
+                            <div style={{ width: `${(stats.current_xp % 100)}%`, height: '100%', backgroundColor: '#e94560' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{stats.current_xp % 100}/100 XP</span>
+                            <span>До следующего уровня: {stats.xp_to_next_level} XP</span>
+                        </div>
+                    </div>
+
+                    {stats.weak_topics && stats.weak_topics.length > 0 && (
+                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
+                            <h2>⚠️ Слабые места</h2>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '15px' }}>
+                                {stats.weak_topics.map((topic, idx) => (
+                                    <div key={idx}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                            <span>{topic.topic_name}</span>
+                                            <span>{topic.correct_percent}%</span>
+                                        </div>
+                                        <div style={{ width: '100%', height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div style={{ width: `${topic.correct_percent}%`, height: '100%', backgroundColor: topic.correct_percent < 50 ? '#ff6b6b' : '#ffd700' }} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -658,36 +732,70 @@ const ProfilePage: React.FC = () => {
                 </div>
             )}
 
-            {/* Вкладка для ученика: Доступные курсы */}
+            {/* Вкладка "Доступные курсы" для ученика */}
             {user.role === 'student' && activeTab === 'courses' && (
                 <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
-                    <h2>Доступные курсы</h2>
-                    <p>Выберите курс для обучения</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                        {courses.map(course => (
-                            <div key={course.id} style={{ border: '1px solid #ddd', borderRadius: '12px', padding: '20px' }}>
-                                <h3>{course.title}</h3>
-                                <p>{course.description}</p>
-                                <button style={{ marginTop: '15px', padding: '8px 20px', backgroundColor: '#e94560', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer' }}>Записаться</button>
+                    <h2>📚 Доступные курсы</h2>
+                    <p style={{ marginBottom: '20px', color: '#666' }}>Выберите курс для обучения</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                        {availableCourses.map(course => (
+                            <div key={course.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '20px', transition: 'transform 0.2s', backgroundColor: '#fafafa' }}>
+                                <h3 style={{ color: '#1a1a2e' }}>{course.title}</h3>
+                                <p style={{ color: '#666', fontSize: '14px' }}>{course.description}</p>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await api.post(`/courses/enroll/${course.id}`);
+                                            loadAvailableCourses();
+                                            loadMyCourses();
+                                            alert('Вы успешно записались на курс!');
+                                        } catch (error) {
+                                            alert('Ошибка при записи');
+                                        }
+                                    }}
+                                    style={{ marginTop: '15px', padding: '8px 20px', backgroundColor: '#e94560', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer' }}
+                                >
+                                    Записаться →
+                                </button>
                             </div>
                         ))}
+                        {availableCourses.length === 0 && (
+                            <p style={{ color: '#666', textAlign: 'center', padding: '40px' }}>Нет доступных курсов. Вы уже записаны на все курсы!</p>
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* Вкладка для ученика: Мои курсы */}
+            {/* Вкладка "Мои курсы" для ученика */}
             {user.role === 'student' && activeTab === 'mycourses' && (
                 <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
-                    <h2>Мои курсы</h2>
-                    <p>Курсы, на которые вы записаны</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                        {courses.map(course => (
-                            <div key={course.id} style={{ border: '1px solid #ddd', borderRadius: '12px', padding: '20px' }}>
+                    <h2>📖 Мои курсы</h2>
+                    <p style={{ marginBottom: '20px', color: '#666' }}>Курсы, на которые вы записаны</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                        {myCourses.map(course => (
+                            <div key={course.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '20px', transition: 'transform 0.2s' }}>
                                 <h3>{course.title}</h3>
-                                <p>Прогресс: 0%</p>
-                                <button style={{ marginTop: '15px', padding: '8px 20px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer' }}>Продолжить</button>
+                                <p style={{ color: '#666', fontSize: '14px' }}>{course.description}</p>
+                                <div style={{ margin: '15px 0' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
+                                        <span>Прогресс</span>
+                                        <span>{course.progress || 0}%</span>
+                                    </div>
+                                    <div style={{ width: '100%', height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${course.progress || 0}%`, height: '100%', backgroundColor: '#4CAF50' }} />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => navigate(`/student/course/${course.id}`)}
+                                    style={{ marginTop: '15px', padding: '8px 20px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer' }}
+                                >
+                                    Продолжить обучение →
+                                </button>
                             </div>
                         ))}
+                        {myCourses.length === 0 && (
+                            <p style={{ color: '#666', textAlign: 'center', padding: '40px' }}>Вы ещё не записаны ни на один курс. Перейдите во вкладку "Доступные курсы".</p>
+                        )}
                     </div>
                 </div>
             )}

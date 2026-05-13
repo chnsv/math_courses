@@ -36,9 +36,7 @@ def create_refresh_token(user_id: int) -> str:
 
 
 def decode_token(token: str) -> dict:
-    """Декодирование JWT-токена"""
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),

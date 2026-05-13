@@ -28,15 +28,16 @@ def get_progress(
         models.TaskAttempt.is_correct == True
     ).count()
 
-    # XP до следующего уровня
+    # Расчёт XP до следующего уровня (каждый уровень = 100 XP)
     current_xp = current_user.xp
     current_level = current_user.level
     xp_in_level = current_xp % 100
     xp_to_next = 100 - xp_in_level if xp_in_level != 0 else 0
 
-    # Анализ слабых мест
+    # Анализ слабых мест (темы с процентом правильных ответов ниже 60%)
     weak_topics = []
     try:
+        from sqlalchemy import func
         topic_stats = db.query(
             models.Topic.id,
             models.Topic.title,

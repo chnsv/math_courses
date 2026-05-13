@@ -16,6 +16,7 @@ import TrialOGEPage from './pages/TrialOGEPage';
 import TrialEGEPage from './pages/TrialEGEPage';
 import ProfilePage from './pages/ProfilePage';
 import TopicManagementPage from './pages/TopicManagementPage';
+import StudentCoursePage from './pages/StudentCoursePage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, loading } = useAuth();
@@ -41,6 +42,8 @@ function AppRoutes() {
             <Route path="/topic/:id/tasks" element={<PrivateRoute><TasksPage /></PrivateRoute>} />
             <Route path="/topic/:id/theory" element={<PrivateRoute><TheoryPage /></PrivateRoute>} />
             <Route path="/admin/course/:courseId/topic/:topicId" element={<PrivateRoute><TopicManagementPage /></PrivateRoute>} />
+            <Route path="/student/course/:courseId" element={<PrivateRoute><StudentCoursePage /></PrivateRoute>} />
+
         </Routes>
     );
 }

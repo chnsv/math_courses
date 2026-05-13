@@ -81,15 +81,32 @@ def submit_attempt(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Отправка ответа на задачу"""
+    """Отправка ответа на задачу (с проверкой повторных попыток)"""
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # Проверяем, решал ли пользователь эту задачу ранее успешно
+    existing_correct = db.query(models.TaskAttempt).filter(
+        models.TaskAttempt.user_id == current_user.id,
+        models.TaskAttempt.task_id == task_id,
+        models.TaskAttempt.is_correct == True
+    ).first()
+
+    if existing_correct:
+        return {
+            "is_correct": True,
+            "score": 0,
+            "earned_xp": 0,
+            "already_solved": True,
+            "solution_explanation": "Вы уже решили эту задачу ранее!"
+        }
 
     user_answer = attempt_data.get("user_answer", "")
     is_correct = False
     explanation = ""
 
+    # Проверка в зависимости от типа задачи
     if task.type == 'test':
         correct_option = db.query(models.TestOption).filter(
             models.TestOption.task_id == task_id,
@@ -111,21 +128,23 @@ def submit_attempt(
         if is_correct:
             explanation = "Верный ответ!"
         else:
-            explanation = f"Неверно. Правильный ответ: {task.correct_answer}"
+            explanation = task.solution_explanation or f"Неверно. Правильный ответ: {task.correct_answer}"
 
     elif task.type == 'equation':
+        # Здесь будет проверка через SymPy
         if user_answer.strip() == task.correct_answer.strip():
             is_correct = True
             explanation = "Уравнение решено верно!"
         else:
             is_correct = False
-            explanation = f"Неверно. Правильное решение: {task.solution_explanation or task.correct_answer}"
+            explanation = task.solution_explanation or f"Неверно. Правильное решение: {task.correct_answer}"
     else:
         is_correct = False
 
     earned_xp = XP_REWARDS.get(task.type, 10) if is_correct else 0
     score = 100 if is_correct else 0
 
+    # Сохраняем попытку
     attempt = models.TaskAttempt(
         user_id=current_user.id,
         task_id=task_id,
