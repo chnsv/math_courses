@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from ..database import Base
 
@@ -14,5 +14,10 @@ class User(Base):
     avatar_url = Column(String)
     xp = Column(Integer, default=0)
     level = Column(Integer, default=1)
+    email_verified = Column(Boolean, default=False)
+    verification_token = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    reset_password_token = Column(String(255), nullable=True)
+    reset_password_expires = Column(DateTime, nullable=True)

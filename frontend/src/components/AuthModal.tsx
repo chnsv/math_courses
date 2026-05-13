@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -16,6 +17,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { login, register } = useAuth();
+
+    // Состояния для восстановления пароля
+    const [showResetForm, setShowResetForm] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetMessage, setResetMessage] = useState('');
+    const [resetError, setResetError] = useState('');
 
     if (!isOpen) return null;
 
@@ -40,6 +47,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             setError(err.response?.data?.detail || 'Ошибка');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!resetEmail) {
+            setResetError('Введите email');
+            return;
+        }
+        setResetError('');
+        setResetMessage('');
+        try {
+            await api.post('/auth/forgot-password', null, { params: { email: resetEmail } });
+            setResetMessage('Инструкции по восстановлению отправлены на ваш email');
+            setTimeout(() => {
+                setShowResetForm(false);
+                setResetEmail('');
+                setResetMessage('');
+            }, 3000);
+        } catch (err: any) {
+            setResetError(err.response?.data?.detail || 'Ошибка отправки');
         }
     };
 
@@ -86,64 +113,114 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     ×
                 </button>
 
-                <h2 style={{ marginBottom: '24px', textAlign: 'center', color: '#1a1a2e' }}>
-                    {isLogin ? 'Вход в систему' : 'Регистрация'}
-                </h2>
+                {/* Форма восстановления пароля */}
+                {showResetForm ? (
+                    <div>
+                        <h2 style={{ marginBottom: '24px', textAlign: 'center', color: '#1a1a2e' }}>Восстановление пароля</h2>
+                        <p style={{ marginBottom: '20px', textAlign: 'center', color: '#666' }}>Введите email, указанный при регистрации</p>
 
-                {error && (
-                    <div style={{
-                        backgroundColor: '#fee',
-                        color: '#e94560',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        marginBottom: '20px',
-                        textAlign: 'center',
-                        fontSize: '14px'
-                    }}>
-                        {error}
+                        {resetMessage && (
+                            <div style={{
+                                backgroundColor: '#d4edda',
+                                color: '#155724',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                textAlign: 'center',
+                                fontSize: '14px'
+                            }}>
+                                {resetMessage}
+                            </div>
+                        )}
+                        {resetError && (
+                            <div style={{
+                                backgroundColor: '#fee',
+                                color: '#e94560',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                textAlign: 'center',
+                                fontSize: '14px'
+                            }}>
+                                {resetError}
+                            </div>
+                        )}
+
+                        <input
+                            type="email"
+                            placeholder="Email"
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                marginBottom: '16px',
+                                border: '1px solid #ddd',
+                                borderRadius: '8px',
+                                fontSize: '16px'
+                            }}
+                        />
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => {
+                                    setShowResetForm(false);
+                                    setResetEmail('');
+                                    setResetMessage('');
+                                    setResetError('');
+                                }}
+                                style={{
+                                    padding: '10px 20px',
+                                    backgroundColor: '#ccc',
+                                    color: '#333',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                onClick={handleResetPassword}
+                                style={{
+                                    padding: '10px 20px',
+                                    backgroundColor: '#e94560',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Отправить
+                            </button>
+                        </div>
                     </div>
-                )}
+                ) : (
+                    <>
+                        <h2 style={{ marginBottom: '24px', textAlign: 'center', color: '#1a1a2e' }}>
+                            {isLogin ? 'Вход в систему' : 'Регистрация'}
+                        </h2>
 
-                <form onSubmit={handleSubmit}>
-                    <input
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            marginBottom: '16px',
-                            border: '1px solid #ddd',
-                            borderRadius: '8px',
-                            fontSize: '16px'
-                        }}
-                    />
+                        {error && (
+                            <div style={{
+                                backgroundColor: '#fee',
+                                color: '#e94560',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                textAlign: 'center',
+                                fontSize: '14px'
+                            }}>
+                                {error}
+                            </div>
+                        )}
 
-                    <input
-                        type="password"
-                        placeholder="Пароль"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            marginBottom: '16px',
-                            border: '1px solid #ddd',
-                            borderRadius: '8px',
-                            fontSize: '16px'
-                        }}
-                    />
-
-                    {!isLogin && (
-                        <>
+                        <form onSubmit={handleSubmit}>
                             <input
-                                type="text"
-                                placeholder="ФИО"
-                                value={fullName}
-                                onChange={(e) => setFullName(e.target.value)}
+                                type="email"
+                                placeholder="Email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
                                 style={{
                                     width: '100%',
                                     padding: '12px',
@@ -154,80 +231,134 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                                 }}
                             />
 
-                            {!isLogin && role === 'student' && (
-                                <input
-                                    type="text"
-                                    placeholder="Класс (например, 11А)"
-                                    value={className}
-                                    onChange={(e) => setClassName(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px',
-                                        marginBottom: '16px',
-                                        border: '1px solid #ddd',
-                                        borderRadius: '8px',
-                                        fontSize: '16px'
-                                    }}
-                                />
+                            <input
+                                type="password"
+                                placeholder="Пароль"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    marginBottom: '16px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '8px',
+                                    fontSize: '16px'
+                                }}
+                            />
+
+                            {!isLogin && (
+                                <>
+                                    <input
+                                        type="text"
+                                        placeholder="ФИО"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            marginBottom: '16px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '8px',
+                                            fontSize: '16px'
+                                        }}
+                                    />
+
+                                    {role === 'student' && (
+                                        <input
+                                            type="text"
+                                            placeholder="Класс (например, 11А)"
+                                            value={className}
+                                            onChange={(e) => setClassName(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                marginBottom: '16px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '8px',
+                                                fontSize: '16px'
+                                            }}
+                                        />
+                                    )}
+
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Регистрируюсь как:</label>
+                                        <div style={{ display: 'flex', gap: '15px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                                <input type="radio" value="student" checked={role === 'student'} onChange={(e) => setRole(e.target.value)} />
+                                                Ученик
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                                <input type="radio" value="teacher" checked={role === 'teacher'} onChange={(e) => setRole(e.target.value)} />
+                                                Учитель
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                                <input type="radio" value="admin" checked={role === 'admin'} onChange={(e) => setRole(e.target.value)} />
+                                                Администратор
+                                            </label>
+                                        </div>
+                                    </div>
+                                </>
                             )}
 
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Регистрируюсь как:</label>
-                                <div style={{ display: 'flex', gap: '15px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                                        <input type="radio" value="student" checked={role === 'student'} onChange={(e) => setRole(e.target.value)} />
-                                        Ученик
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                                        <input type="radio" value="teacher" checked={role === 'teacher'} onChange={(e) => setRole(e.target.value)} />
-                                        Учитель
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                                        <input type="radio" value="admin" checked={role === 'admin'} onChange={(e) => setRole(e.target.value)} />
-                                        Администратор
-                                    </label>
-                                </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    backgroundColor: '#e94560',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    cursor: 'pointer',
+                                    opacity: loading ? 0.7 : 1
+                                }}
+                            >
+                                {loading ? 'Загрузка...' : (isLogin ? 'Войти' : 'Зарегистрироваться')}
+                            </button>
+                        </form>
+
+                        {/* Кнопка "Забыли пароль?" */}
+                        {isLogin && (
+                            <div style={{ textAlign: 'center', marginTop: '15px' }}>
+                                <button
+                                    onClick={() => setShowResetForm(true)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#667eea',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        textDecoration: 'underline'
+                                    }}
+                                >
+                                    Забыли пароль?
+                                </button>
                             </div>
-                        </>
-                    )}
+                        )}
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            backgroundColor: '#e94560',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '16px',
-                            cursor: 'pointer',
-                            opacity: loading ? 0.7 : 1
-                        }}
-                    >
-                        {loading ? 'Загрузка...' : (isLogin ? 'Войти' : 'Зарегистрироваться')}
-                    </button>
-                </form>
-
-                <p style={{ textAlign: 'center', marginTop: '20px', color: '#666' }}>
-                    {isLogin ? 'Нет аккаунта? ' : 'Уже есть аккаунт? '}
-                    <button
-                        onClick={() => {
-                            setIsLogin(!isLogin);
-                            setError('');
-                        }}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#e94560',
-                            cursor: 'pointer',
-                            textDecoration: 'underline'
-                        }}
-                    >
-                        {isLogin ? 'Зарегистрироваться' : 'Войти'}
-                    </button>
-                </p>
+                        <p style={{ textAlign: 'center', marginTop: '20px', color: '#666' }}>
+                            {isLogin ? 'Нет аккаунта? ' : 'Уже есть аккаунт? '}
+                            <button
+                                onClick={() => {
+                                    setIsLogin(!isLogin);
+                                    setError('');
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#e94560',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline'
+                                }}
+                            >
+                                {isLogin ? 'Зарегистрироваться' : 'Войти'}
+                            </button>
+                        </p>
+                    </>
+                )}
             </div>
         </>
     );

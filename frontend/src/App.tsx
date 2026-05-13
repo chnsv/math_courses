@@ -17,11 +17,23 @@ import TrialEGEPage from './pages/TrialEGEPage';
 import ProfilePage from './pages/ProfilePage';
 import TopicManagementPage from './pages/TopicManagementPage';
 import StudentCoursePage from './pages/StudentCoursePage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, loading } = useAuth();
     if (loading) return <div>Загрузка...</div>;
     return user ? <>{children}</> : <Navigate to="/" />;
+};
+
+const login = async (email: string, password: string) => {
+    const response = await api.post('/auth/login', { email, password });
+    const { access_token, refresh_token, user } = response.data;
+    localStorage.setItem('access_token', access_token);
+    localStorage.setItem('refresh_token', refresh_token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+    window.location.href = '/profile';  // Перенаправление на ЛК
 };
 
 function AppRoutes() {
@@ -43,7 +55,8 @@ function AppRoutes() {
             <Route path="/topic/:id/theory" element={<PrivateRoute><TheoryPage /></PrivateRoute>} />
             <Route path="/admin/course/:courseId/topic/:topicId" element={<PrivateRoute><TopicManagementPage /></PrivateRoute>} />
             <Route path="/student/course/:courseId" element={<PrivateRoute><StudentCoursePage /></PrivateRoute>} />
-
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
         </Routes>
     );
 }
