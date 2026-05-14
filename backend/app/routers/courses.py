@@ -3,19 +3,14 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from ..database import get_db
 from .. import models
-from ..services.auth_service import decode_token
-
+from ..services.auth_service import decode_token, get_current_user
 router = APIRouter()
-
-
-# ========== СПЕЦИАЛЬНЫЕ ЭНДПОИНТЫ (ДОЛЖНЫ БЫТЬ ПЕРВЫМИ) ==========
 
 @router.get("/available")
 def get_available_courses(
         authorization: Optional[str] = Header(None),
         db: Session = Depends(get_db)
 ):
-    """Получение курсов, доступных для записи"""
     print("get_available_courses called")
 
     # Получаем пользователя из токена
@@ -88,7 +83,6 @@ def get_my_courses(
 
     result = []
     for course in courses:
-        # Вычисляем реальный прогресс по курсу
         enrollment = next(e for e in enrollments if e.course_id == course.id)
         progress = enrollment.progress if enrollment.progress else 0
 
@@ -172,6 +166,31 @@ def enroll_course(
 
     return {"message": "Successfully enrolled", "course": course}
 
+@router.get("/")
+def get_courses(db: Session = Depends(get_db)):
+    """Получение всех курсов"""
+    courses = db.query(models.Course).order_by(models.Course.order_index).all()
+    return courses
+
+@router.post("/")
+def create_course(
+        course_data: dict,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    new_course = models.Course(
+        title=course_data.get("title"),
+        description=course_data.get("description"),
+        slug=course_data.get("slug"),
+        order_index=course_data.get("order_index", 0)
+    )
+    db.add(new_course)
+    db.commit()
+    db.refresh(new_course)
+    return new_course
 
 @router.get("/my-courses/{course_id}/progress")
 def get_course_progress(
@@ -236,13 +255,6 @@ def get_course_progress(
     return topic_progress
 
 
-# ========== ОБЫЧНЫЕ ЭНДПОИНТЫ (ПОСЛЕ СПЕЦИАЛЬНЫХ) ==========
-
-@router.get("/")
-def get_courses(db: Session = Depends(get_db)):
-    """Получение всех курсов"""
-    courses = db.query(models.Course).order_by(models.Course.order_index).all()
-    return courses
 
 
 @router.get("/{course_id}")
@@ -252,3 +264,102 @@ def get_course(course_id: int, db: Session = Depends(get_db)):
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     return course
+
+
+@router.post("/{course_id}/topics")
+def create_topic(
+        course_id: int,
+        topic_data: dict,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Создание темы в курсе (только для admin)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    # Проверяем, существует ли курс
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    new_topic = models.Topic(
+        course_id=course_id,
+        title=topic_data.get("title"),
+        description=topic_data.get("description"),
+        order_index=topic_data.get("order_index", 0)
+    )
+    db.add(new_topic)
+    db.commit()
+    db.refresh(new_topic)
+    return new_topic
+
+
+@router.post("/{course_id}/assign-teacher")
+def assign_teacher_to_course(
+        course_id: int,
+        teacher_data: dict,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Назначение учителя на курс (только для admin)"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    teacher_id = teacher_data.get("teacher_id")
+
+    # Проверяем, существует ли учитель
+    teacher = db.query(models.User).filter(
+        models.User.id == teacher_id,
+        models.User.role == "teacher"
+    ).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    # Проверяем, существует ли курс
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    # Проверяем, не назначен ли уже
+    existing = db.query(models.TeacherCourse).filter(
+        models.TeacherCourse.teacher_id == teacher_id,
+        models.TeacherCourse.course_id == course_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Teacher already assigned to this course")
+
+    assignment = models.TeacherCourse(
+        teacher_id=teacher_id,
+        course_id=course_id
+    )
+    db.add(assignment)
+    db.commit()
+
+    return {"message": f"Teacher {teacher.email} assigned to course {course.title}"}
+
+
+@router.get("/{course_id}/teachers")
+def get_course_teachers(
+        course_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    """Получение списка учителей, назначенных на курс"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    assignments = db.query(models.TeacherCourse).filter(
+        models.TeacherCourse.course_id == course_id
+    ).all()
+
+    teacher_ids = [a.teacher_id for a in assignments]
+    teachers = db.query(models.User).filter(models.User.id.in_(teacher_ids)).all() if teacher_ids else []
+
+    return [
+        {
+            "id": t.id,
+            "email": t.email,
+            "full_name": t.full_name
+        }
+        for t in teachers
+    ]

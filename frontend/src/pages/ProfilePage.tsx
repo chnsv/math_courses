@@ -84,6 +84,11 @@ const ProfilePage: React.FC = () => {
     const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
     const [myCourses, setMyCourses] = useState<Course[]>([]);
 
+    const [selectedCourseForTeacher, setSelectedCourseForTeacher] = useState<Course | null>(null);
+    const [showAssignTeacherModal, setShowAssignTeacherModal] = useState(false);
+    const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
+    const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null);
+
     useEffect(() => {
         if (location.state?.activeTab) {
             setActiveTab(location.state.activeTab);
@@ -169,6 +174,31 @@ const ProfilePage: React.FC = () => {
         }
     };
 
+    const loadAvailableTeachers = async () => {
+        try {
+            const response = await api.get('/admin/users?role=teacher');
+            setAvailableTeachers(response.data.items || []);
+        } catch (error) {
+            console.error('Ошибка загрузки учителей:', error);
+        }
+    };
+
+    const assignTeacher = async () => {
+        if (!selectedCourseForTeacher || !selectedTeacherId) {
+            alert('Выберите учителя');
+            return;
+        }
+        try {
+            await api.post(`/courses/${selectedCourseForTeacher.id}/assign-teacher`, { teacher_id: selectedTeacherId });
+            alert('Учитель назначен на курс');
+            setShowAssignTeacherModal(false);
+            setSelectedTeacherId(null);
+            setSelectedCourseForTeacher(null);
+        } catch (error) {
+            alert('Ошибка назначения');
+        }
+    };
+
     const filterStudents = async () => {
         setLoading(true);
         try {
@@ -204,6 +234,7 @@ const ProfilePage: React.FC = () => {
             loadCourses();
             alert('Курс добавлен');
         } catch (error) {
+            console.error('Ошибка добавления курса:', error);
             alert('Ошибка добавления');
         }
     };
@@ -977,6 +1008,7 @@ const ProfilePage: React.FC = () => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                     <button onClick={() => { setSelectedCourseForStudents(course); loadCourseStudents(course.id); }} style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Ученики</button>
+                                    <button onClick={() => { setSelectedCourseForTeacher(course); setShowAssignTeacherModal(true); loadAvailableTeachers(); }}  style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }} > Назначить учителя </button>
                                 </div>
                             </div>
                         ))}
@@ -1099,6 +1131,28 @@ const ProfilePage: React.FC = () => {
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setShowAddTeacherModal(false)} style={{ padding: '8px 20px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                             <button onClick={addTeacher} style={{ padding: '8px 20px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Добавить</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAssignTeacherModal && selectedCourseForTeacher && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '400px' }}>
+                        <h3>Назначить учителя на курс "{selectedCourseForTeacher.title}"</h3>
+                        <select
+                            value={selectedTeacherId || ''}
+                            onChange={(e) => setSelectedTeacherId(parseInt(e.target.value))}
+                            style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }}
+                        >
+                            <option value="">Выберите учителя</option>
+                            {availableTeachers.map(t => (
+                                <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
+                            ))}
+                        </select>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setShowAssignTeacherModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
+                            <button onClick={assignTeacher} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Назначить</button>
                         </div>
                     </div>
                 </div>
