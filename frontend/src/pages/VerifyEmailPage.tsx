@@ -16,7 +16,6 @@ const VerifyEmailPage: React.FC = () => {
             return;
         }
 
-        // Отправляем запрос только один раз
         let isMounted = true;
 
         api.get('/auth/verify-email', { params: { token } })
@@ -24,7 +23,6 @@ const VerifyEmailPage: React.FC = () => {
                 if (isMounted) {
                     setStatus('success');
                     setMessage(response.data.message || 'Email успешно подтверждён!');
-                    // Через 2 секунды перенаправляем на профиль
                     setTimeout(() => {
                         navigate('/profile');
                     }, 2000);
@@ -35,7 +33,6 @@ const VerifyEmailPage: React.FC = () => {
                     setStatus('error');
                     const errorMsg = error.response?.data?.detail || 'Ошибка подтверждения';
                     setMessage(errorMsg);
-                    // Через 3 секунды перенаправляем на главную
                     setTimeout(() => {
                         navigate('/');
                     }, 3000);

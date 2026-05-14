@@ -23,7 +23,6 @@ class EquationCheckResponse(BaseModel):
 
 @router.get("/test")
 def test_sympy():
-    """Тестовый эндпоинт для проверки работы SymPy"""
     try:
         from sympy import symbols, Eq, solve
         x = symbols('x')
@@ -40,7 +39,6 @@ def test_sympy():
 
 @router.post("/check-equation", response_model=EquationCheckResponse)
 def check_equation_endpoint(request: EquationCheckRequest):
-    """Проверка решения уравнения с использованием SymPy (ФТ 6.1)"""
     is_correct, explanation, correct_solution = check_equation(
         request.equation,
         request.user_answer

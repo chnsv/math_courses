@@ -4,7 +4,7 @@ import { tasksApi } from '../services/api';
 
 interface Task {
     id: number;
-    type: string;  // 'test', 'numeric', 'equation'
+    type: string;
     question_text: string;
     difficulty: number;
     options?: { id: number; text: string }[];
@@ -187,7 +187,7 @@ const TasksPage: React.FC = () => {
                     </div>
                 )}
 
-                {/* Кнопка проверки (показываем, только если ответ не отправлен) */}
+                {/* Кнопка проверки */}
                 {!result && (
                     <button
                         onClick={handleSubmit}
@@ -217,7 +217,7 @@ const TasksPage: React.FC = () => {
                         border: `1px solid ${result.is_correct ? '#c3e6cb' : '#f5c6cb'}`,
                     }}>
                         <div style={{ fontSize: 18, marginBottom: 10 }}>
-                            {result.is_correct ? '✓ Правильно!' : '✗ Неправильно'}
+                            {result.is_correct ? 'Правильно!' : 'Неправильно'}
                         </div>
                         {result.earned_xp > 0 && (
                             <div style={{ marginBottom: 10, color: '#28a745' }}>

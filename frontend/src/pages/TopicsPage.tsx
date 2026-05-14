@@ -41,8 +41,8 @@ const TopicsPage: React.FC = () => {
             <h3>{topic.title}</h3>
             <p>{topic.description}</p>
             <div>
-                <Link to={`/topic/${topic.id}/theory`} style={{ marginRight: 16 }}>📖 Теория</Link>
-                <Link to={`/topic/${topic.id}/tasks`}>📝 Задачи</Link>
+                <Link to={`/topic/${topic.id}/theory`} style={{ marginRight: 16 }}>Теория</Link>
+                <Link to={`/topic/${topic.id}/tasks`}>Задачи</Link>
             </div>
             {topic.children.length > 0 && (
                 <div style={{ marginTop: 16, marginLeft: 20 }}>

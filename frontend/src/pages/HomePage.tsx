@@ -138,19 +138,19 @@ const HomePage: React.FC = () => {
         const newRecommendations: string[] = [];
 
         if (percent >= 80) {
-            newRecommendations.push('🎉 Отличный результат! Вы готовы к следующему уровню.');
-            if (selectedGrade === '9') newRecommendations.push('📚 Рекомендуем курс "Подготовка к ОГЭ" для закрепления.');
-            else if (selectedGrade === '10-11') newRecommendations.push('🎯 Рекомендуем курс "Подготовка к ЕГЭ (профиль)".');
+            newRecommendations.push('Отличный результат! Вы готовы к следующему уровню.');
+            if (selectedGrade === '9') newRecommendations.push('Рекомендуем курс "Подготовка к ОГЭ" для закрепления.');
+            else if (selectedGrade === '10-11') newRecommendations.push('Рекомендуем курс "Подготовка к ЕГЭ (профиль)".');
         } else if (percent >= 50) {
-            newRecommendations.push('📖 Хороший результат! Есть темы, которые стоит подтянуть.');
-            if (selectedGrade === '5-6') newRecommendations.push('📘 Рекомендуем курс "Математика 5-6 класс".');
-            else if (selectedGrade === '7-8') newRecommendations.push('📐 Рекомендуем курс "Алгебра 7-8 класс".');
+            newRecommendations.push('Хороший результат! Есть темы, которые стоит подтянуть.');
+            if (selectedGrade === '5-6') newRecommendations.push('Рекомендуем курс "Математика 5-6 класс".');
+            else if (selectedGrade === '7-8') newRecommendations.push('Рекомендуем курс "Алгебра 7-8 класс".');
         } else {
-            newRecommendations.push('📘 Рекомендуем начать с курса соответствующего уровня и повторить теорию.');
+            newRecommendations.push('Рекомендуем начать с курса соответствующего уровня и повторить теорию.');
         }
 
         if (incorrectDetails.length > 3) {
-            newRecommendations.push('📚 Рекомендуем больше практики и регулярное повторение материала.');
+            newRecommendations.push('Рекомендуем больше практики и регулярное повторение материала.');
         }
 
         setRecommendations(newRecommendations);
@@ -181,7 +181,7 @@ const HomePage: React.FC = () => {
                     Не можете определиться с выбором курса?
                 </h2>
                 <p style={{ fontSize: '18px', marginBottom: '30px', opacity: 0.9 }}>
-                    Пройдите тестирование (10 вопросов), и мы подберём курс специально для вас
+                    Пройдите тестирование, и мы подберём курс специально для вас
                 </p>
                 {!testStarted && !testCompleted && (
                     <button
@@ -430,11 +430,10 @@ const HomePage: React.FC = () => {
                 </div>
             )}
 
-            {/* Остальные блоки (Преимущества, FAQ, Футер) остаются без изменений */}
             <div style={{ padding: '60px 20px', maxWidth: '1200px', margin: '0 auto' }}>
                 <h2 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '32px' }}>Почему выбирают нас?</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
-                    <div style={{ textAlign: 'center', padding: '20px' }}><div style={{ fontSize: '48px', marginBottom: '15px' }}>🤖</div><h3>Проверка уравнений</h3><p>Автоматическая проверка решений с помощью ИИ</p></div>
+                    <div style={{ textAlign: 'center', padding: '20px' }}><div style={{ fontSize: '48px', marginBottom: '15px' }}>🤖</div><h3>Проверка уравнений</h3><p>Автоматическая проверка решений с помощью SymPy</p></div>
                     <div style={{ textAlign: 'center', padding: '20px' }}><div style={{ fontSize: '48px', marginBottom: '15px' }}>🎲</div><h3>Уникальные варианты</h3><p>У каждого ученика свои задачи</p></div>
                     <div style={{ textAlign: 'center', padding: '20px' }}><div style={{ fontSize: '48px', marginBottom: '15px' }}>📊</div><h3>Статистика прогресса</h3><p>Отслеживайте успехи</p></div>
                     <div style={{ textAlign: 'center', padding: '20px' }}><div style={{ fontSize: '48px', marginBottom: '15px' }}>🎯</div><h3>Подготовка к ЕГЭ</h3><p>Все задания актуальны</p></div>
@@ -447,7 +446,7 @@ const HomePage: React.FC = () => {
                     {[
                         { q: 'Как начать обучение?', a: 'Зарегистрируйтесь, выберите тему и приступайте к решению задач.' },
                         { q: 'Сколько времени длится курс?', a: 'Курс рассчитан на индивидуальный темп.' },
-                        { q: 'Есть ли обратная связь от преподавателя?', a: 'Да, вы можете задать вопрос в комментариях к задаче.' },
+                        //{ q: 'Есть ли обратная связь от преподавателя?', a: 'Да, вы можете задать вопрос в комментариях к задаче.' },
                         { q: 'Подходит ли курс для подготовки к ЕГЭ?', a: 'Да, все темы и задачи соответствуют кодификатору ЕГЭ.' },
                     ].map((item, idx) => (
                         <details key={idx} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px 24px', marginBottom: '16px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
@@ -461,7 +460,7 @@ const HomePage: React.FC = () => {
             <footer style={{ backgroundColor: '#1a1a2e', color: '#aaa', textAlign: 'center', padding: '40px 20px', fontSize: '14px' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap', marginBottom: '20px' }}>
-                        <Link to="/reviews" style={{ color: '#aaa', textDecoration: 'none' }}>Отзывы</Link>
+                        {/*<Link to="/reviews" style={{ color: '#aaa', textDecoration: 'none' }}>Отзывы</Link>*/}
                         <Link to="/about" style={{ color: '#aaa', textDecoration: 'none' }}>О нас</Link>
                         <a href="#privacy" style={{ color: '#aaa', textDecoration: 'none' }}>Политика конфиденциальности</a>
                         <a href="#contacts" style={{ color: '#aaa', textDecoration: 'none' }}>Контакты</a>

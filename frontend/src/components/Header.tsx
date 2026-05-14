@@ -34,6 +34,7 @@ const Header: React.FC = () => {
         { label: 'Пробники ОГЭ', link: '/trial-oge' },
         { label: 'Пробники ЕГЭ', link: '/trial-ege' },
     ];
+//<Link to="/reviews" style={{ color: 'white', textDecoration: 'none' }}>Отзывы</Link>
 
     return (
         <>
@@ -95,7 +96,7 @@ const Header: React.FC = () => {
                                     padding: '8px 0'
                                 }}
                             >
-                                Меню ▼
+                                Меню
                             </button>
                             {isDropdownOpen && (
                                 <div style={{
@@ -129,7 +130,6 @@ const Header: React.FC = () => {
                             )}
                         </div>
 
-                        <Link to="/reviews" style={{ color: 'white', textDecoration: 'none' }}>Отзывы</Link>
                         <Link to="/about" style={{ color: 'white', textDecoration: 'none' }}>О нас</Link>
 
                         {user ? (
@@ -205,7 +205,6 @@ const Header: React.FC = () => {
                                 {item.label}
                             </Link>
                         ))}
-                        <Link to="/reviews" style={{ color: 'white', textDecoration: 'none', padding: '8px 0' }} onClick={() => setIsMenuOpen(false)}>Отзывы</Link>
                         <Link to="/about" style={{ color: 'white', textDecoration: 'none', padding: '8px 0' }} onClick={() => setIsMenuOpen(false)}>О нас</Link>
 
                         {user ? (

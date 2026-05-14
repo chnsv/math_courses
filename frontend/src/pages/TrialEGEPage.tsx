@@ -136,7 +136,7 @@ const TrialEGEPage: React.FC = () => {
                 color: '#1a1a2e',
                 marginBottom: '40px'
             }}>
-                <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>📝 Пробники ЕГЭ</h1>
+                <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Пробники ЕГЭ</h1>
                 <p style={{ fontSize: '20px', maxWidth: '700px', margin: '0 auto', opacity: 0.9 }}>
                     Профильная и базовая математика — решайте варианты как на реальном экзамене
                 </p>
@@ -145,7 +145,7 @@ const TrialEGEPage: React.FC = () => {
             {!testStarted && !testCompleted && (
                 <>
                     <div style={{ marginBottom: '50px' }}>
-                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>📖 Что это такое</h2>
+                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>Что это такое</h2>
                         <p style={{ fontSize: '16px', lineHeight: 1.6, color: '#555', textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
                             Пробные варианты ЕГЭ с автоматической проверкой и разбором.
                             Доступны как базовый, так и профильный уровень. Каждый вариант включает все типы заданий,

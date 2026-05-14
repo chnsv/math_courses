@@ -6,7 +6,7 @@ interface User {
     email: string;
     full_name: string;
     class_name: string;
-    role: string;  // 'student', 'teacher', 'admin'
+    role: string;
     xp: number;
     level: number;
     avatar_url?: string;
@@ -64,7 +64,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await api.post('/auth/register', userData);
         console.log('Ответ регистрации:', response.data);
 
-        // После регистрации сразу логинимся
         await login(userData.email, userData.password);
     };
 

@@ -196,7 +196,7 @@ const TopicManagementPage: React.FC = () => {
                             <button onClick={() => setShowAddTheoryModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
                         </div>
                         <input type="text" placeholder="Заголовок" value={newTheory.title} onChange={(e) => setNewTheory({ ...newTheory, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                        <textarea placeholder="Содержание (поддерживается LaTeX: $$...$$)" value={newTheory.content} onChange={(e) => setNewTheory({ ...newTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                        <textarea placeholder="Содержание" value={newTheory.content} onChange={(e) => setNewTheory({ ...newTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setShowAddTheoryModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                             <button onClick={addTheoryBlock} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Добавить</button>
@@ -217,7 +217,7 @@ const TopicManagementPage: React.FC = () => {
                             <option value="numeric">Числовая задача</option>
                             <option value="test">Тест</option>
                         </select>
-                        <textarea placeholder="Текст задачи (поддержка LaTeX: $$...$$)" value={newTask.question_text} onChange={(e) => setNewTask({ ...newTask, question_text: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                        <textarea placeholder="Текст задачи" value={newTask.question_text} onChange={(e) => setNewTask({ ...newTask, question_text: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
                         <input type="text" placeholder="Правильный ответ" value={newTask.correct_answer} onChange={(e) => setNewTask({ ...newTask, correct_answer: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
                         <input type="number" placeholder="Сложность (1-5)" value={newTask.difficulty} onChange={(e) => setNewTask({ ...newTask, difficulty: parseInt(e.target.value) })} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

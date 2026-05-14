@@ -9,17 +9,13 @@ from ..config import settings
 from ..database import get_db
 from .. import models
 
-# Настройка безопасности для получения токена из заголовка
 security = HTTPBearer()
 
-
 def hash_password(password: str) -> str:
-    """Временно возвращаем пароль как есть (без хеширования)"""
     return password
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Временно сравниваем пароли напрямую"""
     return plain_password == hashed_password
 
 
@@ -42,7 +38,6 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    """Получение текущего пользователя из JWT-токена"""
     token = credentials.credentials
     try:
         payload = decode_token(token)
@@ -60,10 +55,7 @@ def get_current_user_optional(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
         db: Session = Depends(get_db)
 ):
-    """
-    Получение текущего пользователя из JWT-токена (опционально).
-    Возвращает None, если токен не предоставлен или невалиден.
-    """
+
     if not credentials:
         return None
     try:

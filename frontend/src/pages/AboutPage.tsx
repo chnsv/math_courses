@@ -18,7 +18,6 @@ const AboutPage: React.FC = () => {
                 </p>
             </div>
 
-            {/* Миссия */}
             <div style={{ marginBottom: '60px', textAlign: 'center' }}>
                 <h2 style={{ fontSize: '32px', marginBottom: '20px', color: '#1a1a2e' }}>Наша миссия</h2>
                 <p style={{ fontSize: '18px', lineHeight: 1.6, maxWidth: '800px', margin: '0 auto', color: '#555' }}>
@@ -42,9 +41,9 @@ const AboutPage: React.FC = () => {
                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                 }}>
                     <div style={{ fontSize: '48px', marginBottom: '15px' }}>🎓</div>
-                    <h3 style={{ marginBottom: '15px' }}>Для кого этот курс</h3>
+                    <h3 style={{ marginBottom: '15px' }}>Для кого эти курсы</h3>
                     <p style={{ color: '#555', lineHeight: 1.5 }}>
-                        Курс разработан для учащихся 9-11 классов, которые готовятся к сдаче ОГЭ и ЕГЭ по математике.
+                        Курсы разработаны для учащихся 5-11 классов.
                     </p>
                 </div>
                 <div style={{
@@ -89,12 +88,12 @@ const AboutPage: React.FC = () => {
                     <div style={{ textAlign: 'center', padding: '20px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                         <div style={{ fontSize: '48px', marginBottom: '15px' }}>🤖</div>
                         <h3 style={{ marginBottom: '10px' }}>Инновации</h3>
-                        <p>Используем ИИ для проверки решений и генерации задач</p>
+                        <p>Используем SymPy для проверки решений и генерации задач</p>
                     </div>
                     <div style={{ textAlign: 'center', padding: '20px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                         <div style={{ fontSize: '48px', marginBottom: '15px' }}>💚</div>
                         <h3 style={{ marginBottom: '10px' }}>Доступность</h3>
-                        <p>Бесплатный доступ к основным материалам курса</p>
+                        <p>Бесплатный доступ к материалам курса</p>
                     </div>
                     <div style={{ textAlign: 'center', padding: '20px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                         <div style={{ fontSize: '48px', marginBottom: '15px' }}>👥</div>

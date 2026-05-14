@@ -13,7 +13,6 @@ def get_topics(
         course_id: Optional[int] = Query(None, description="ID курса для фильтрации"),
         db: Session = Depends(get_db)
 ):
-    """Получение списка тем (с фильтрацией по курсу)"""
     query = db.query(models.Topic)
     if course_id:
         query = query.filter(models.Topic.course_id == course_id)
@@ -23,7 +22,6 @@ def get_topics(
 
 @router.get("/{topic_id}")
 def get_topic(topic_id: int, db: Session = Depends(get_db)):
-    """Получение информации о теме по ID"""
     topic = db.query(models.Topic).filter(models.Topic.id == topic_id).first()
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
@@ -32,7 +30,6 @@ def get_topic(topic_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{topic_id}/theory")
 def get_theory(topic_id: int, db: Session = Depends(get_db)):
-    """Получение теоретических материалов по теме"""
     theory_blocks = db.query(models.TheoryBlock).filter(
         models.TheoryBlock.topic_id == topic_id
     ).order_by(models.TheoryBlock.order_index).all()
@@ -58,7 +55,6 @@ def create_theory_block(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Создание блока теории (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -80,7 +76,6 @@ def delete_theory_block(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Удаление блока теории (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -99,7 +94,6 @@ def create_task(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Создание задачи (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 

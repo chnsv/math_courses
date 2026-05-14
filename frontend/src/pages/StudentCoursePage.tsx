@@ -75,8 +75,8 @@ const StudentCoursePage: React.FC = () => {
     const handleTaskAnswer = async (taskId: number, answer: string) => {
         try {
             const response = await api.post(`/tasks/${taskId}/attempt`, { user_answer: answer });
-            alert(response.data.is_correct ? '✓ Правильно! +' + response.data.earned_xp + ' XP' : '✗ Неправильно. ' + response.data.solution_explanation);
-            loadCourseData(); // Обновляем прогресс
+            alert(response.data.is_correct ? 'Правильно! +' + response.data.earned_xp + ' XP' : 'Неправильно. ' + response.data.solution_explanation);
+            loadCourseData();
         } catch (error) {
             alert('Ошибка при проверке');
         }

@@ -14,34 +14,29 @@ def get_progress(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получение прогресса текущего пользователя"""
     user_id = current_user.id
 
-    # Общее количество попыток
-    total_attempts = db.query(models.TaskAttempt).filter(
+    total_attempts = db.query(models.TaskAttempt.task_id).filter(
         models.TaskAttempt.user_id == user_id
-    ).count()
+    ).distinct().count()
 
-    # Количество правильных ответов
-    correct_attempts = db.query(models.TaskAttempt).filter(
+    correct_attempts = db.query(models.TaskAttempt.task_id).filter(
         models.TaskAttempt.user_id == user_id,
         models.TaskAttempt.is_correct == True
-    ).count()
+    ).distinct().count()
 
-    # Расчёт XP до следующего уровня (каждый уровень = 100 XP)
     current_xp = current_user.xp
     current_level = current_user.level
     xp_in_level = current_xp % 100
     xp_to_next = 100 - xp_in_level if xp_in_level != 0 else 0
 
-    # Анализ слабых мест (темы с процентом правильных ответов ниже 60%)
     weak_topics = []
     try:
         from sqlalchemy import func
         topic_stats = db.query(
             models.Topic.id,
             models.Topic.title,
-            func.count(models.TaskAttempt.id).label('total'),
+            func.count(func.distinct(models.TaskAttempt.task_id)).label('total'),
             func.sum(func.cast(models.TaskAttempt.is_correct, type_=int)).label('correct')
         ).join(
             models.Task, models.Task.id == models.TaskAttempt.task_id
@@ -63,7 +58,7 @@ def get_progress(
                         "correct_percent": round(correct_percent, 1)
                     })
     except Exception as e:
-        print(f"Ошибка при анализе слабых мест: {e}")
+        print(f"Ошибка: {e}")
 
     return {
         "total_tasks_solved": total_attempts,
@@ -75,13 +70,11 @@ def get_progress(
         "weak_topics": weak_topics
     }
 
-
 @router.get("/achievements")
 def get_achievements(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получение достижений пользователя"""
     achievements = db.query(
         models.Achievement,
         models.UserAchievement.earned_at
@@ -109,7 +102,6 @@ def get_leaderboard(
         limit: int = Query(10, description="Количество записей"),
         db: Session = Depends(get_db)
 ):
-    """Рейтинг пользователей по XP"""
     users = db.query(models.User).order_by(models.User.xp.desc()).limit(limit).all()
 
     return [
@@ -130,7 +122,6 @@ def get_user_stats(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Статистика другого пользователя (только teacher/admin)"""
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(status_code=403, detail="Недостаточно прав")
 
@@ -166,7 +157,6 @@ def get_topic_stats(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Статистика по конкретной теме"""
     total_attempts = db.query(models.TaskAttempt).join(
         models.Task, models.Task.id == models.TaskAttempt.task_id
     ).filter(

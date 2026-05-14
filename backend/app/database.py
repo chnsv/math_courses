@@ -3,7 +3,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Используем SQLite — не требует пароля, нет проблем с кодировкой
 DATABASE_URL = "sqlite:///./math_courses.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

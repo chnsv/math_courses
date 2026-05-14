@@ -24,7 +24,7 @@ const normalizeAnswer = (ans: string): string => {
         .replace(/e\^x/g, 'e^x');
 };
 
-// Проверка эквивалентности выражений (упрощённая)
+// Проверка эквивалентности выражений
 const areEquivalent = (user: string, correct: string): boolean => {
     const normUser = normalizeAnswer(user);
     const normCorrect = normalizeAnswer(correct);
@@ -53,9 +53,8 @@ const areEquivalent = (user: string, correct: string): boolean => {
         if (variants.some(v => normUser === v)) return true;
     }
 
-    // Проверка для ответов с pi (тригонометрия)
+    // Проверка для ответов с pi
     if (normCorrect.includes('pi') && normUser.includes('pi')) {
-        // Упрощаем оба выражения
         const simplifyPi = (s: string) => s.replace(/pi/gi, 'π').replace(/\*/g, '');
         if (simplifyPi(normUser) === simplifyPi(normCorrect)) return true;
     }
@@ -196,7 +195,7 @@ const TrialEGEPage: React.FC = () => {
             {!testStarted && !testCompleted && (
                 <>
                     <div style={{ marginBottom: '50px' }}>
-                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>📖 Что это такое</h2>
+                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>Что это такое</h2>
                         <p style={{ fontSize: '16px', lineHeight: 1.6, color: '#555', textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
                             Пробные варианты ЕГЭ с автоматической проверкой и разбором.
                             Доступны как базовый, так и профильный уровень. Каждый вариант включает все типы заданий,
@@ -251,7 +250,7 @@ const TrialEGEPage: React.FC = () => {
                     </div>
 
                     <div style={{ marginBottom: '40px' }}>
-                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>✨ Наши преимущества</h2>
+                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>Наши преимущества</h2>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                             <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '16px' }}>
                                 <div style={{ fontSize: '36px', marginBottom: '10px' }}>🎯</div>

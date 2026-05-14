@@ -6,7 +6,6 @@ from ..config import settings
 
 
 def send_verification_email(to_email: str, token: str):
-    """Отправка письма с подтверждением email"""
     verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
 
     subject = "Подтверждение email на MathCourse"
@@ -31,8 +30,8 @@ def send_verification_email(to_email: str, token: str):
         with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, context=context) as server:
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.send_message(msg)
-        print(f"✅ Письмо отправлено на {to_email}")
+        print(f"Письмо отправлено на {to_email}")
         return True
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"Ошибка: {e}")
         return False

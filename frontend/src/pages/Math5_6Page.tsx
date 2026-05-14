@@ -23,11 +23,11 @@ const Math5_6Page: React.FC = () => {
 
         const sum = newDropped.reduce((a, b) => a + b, 0);
         if (sum === targetNumber) {
-            setGameMessage('🎉 Поздравляем! Вы собрали число 12!');
+            setGameMessage('Поздравляем! Вы собрали число 12!');
         } else if (sum < targetNumber && newDropped.length < 3) {
             setGameMessage(`Сумма: ${sum}. Нужно ещё число!`);
         } else {
-            setGameMessage(`✗ Сумма: ${sum}. Не получилось собрать ${targetNumber}. Попробуйте ещё раз!`);
+            setGameMessage(`Сумма: ${sum}. Не получилось собрать ${targetNumber}. Попробуйте ещё раз!`);
         }
 
         setDraggedNumber(null);

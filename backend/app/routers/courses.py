@@ -13,7 +13,6 @@ def get_available_courses(
 ):
     print("get_available_courses called")
 
-    # Получаем пользователя из токена
     user_id = None
     if authorization and authorization.startswith("Bearer "):
         token = authorization.replace("Bearer ", "")
@@ -52,7 +51,6 @@ def get_my_courses(
         authorization: Optional[str] = Header(None),
         db: Session = Depends(get_db)
 ):
-    """Получение курсов, на которые записан ученик"""
     print("get_my_courses called")
 
     user_id = None
@@ -86,9 +84,7 @@ def get_my_courses(
         enrollment = next(e for e in enrollments if e.course_id == course.id)
         progress = enrollment.progress if enrollment.progress else 0
 
-        # Если прогресс не сохранён, вычисляем его
         if progress == 0:
-            # Получаем все темы курса
             topics = db.query(models.Topic).filter(models.Topic.course_id == course.id).all()
             if topics:
                 total_topics = len(topics)
@@ -97,7 +93,6 @@ def get_my_courses(
                     tasks = db.query(models.Task).filter(models.Task.topic_id == topic.id).all()
                     task_ids = [t.id for t in tasks]
                     if task_ids:
-                        # Проверяем, все ли задачи темы решены правильно
                         attempts = db.query(models.TaskAttempt).filter(
                             models.TaskAttempt.user_id == user_id,
                             models.TaskAttempt.task_id.in_(task_ids),
@@ -127,7 +122,6 @@ def enroll_course(
         authorization: Optional[str] = Header(None),
         db: Session = Depends(get_db)
 ):
-    """Запись ученика на курс"""
     print(f"enroll_course: course_id={course_id}")
 
     user_id = None
@@ -168,7 +162,6 @@ def enroll_course(
 
 @router.get("/")
 def get_courses(db: Session = Depends(get_db)):
-    """Получение всех курсов"""
     courses = db.query(models.Course).order_by(models.Course.order_index).all()
     return courses
 
@@ -198,7 +191,6 @@ def get_course_progress(
         authorization: Optional[str] = Header(None),
         db: Session = Depends(get_db)
 ):
-    """Получение прогресса по конкретному курсу"""
     print(f"get_course_progress: course_id={course_id}")
 
     user_id = None
@@ -255,11 +247,8 @@ def get_course_progress(
     return topic_progress
 
 
-
-
 @router.get("/{course_id}")
 def get_course(course_id: int, db: Session = Depends(get_db)):
-    """Получение курса по ID"""
     course = db.query(models.Course).filter(models.Course.id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -273,11 +262,9 @@ def create_topic(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Создание темы в курсе (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    # Проверяем, существует ли курс
     course = db.query(models.Course).filter(models.Course.id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -301,13 +288,11 @@ def assign_teacher_to_course(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Назначение учителя на курс (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     teacher_id = teacher_data.get("teacher_id")
 
-    # Проверяем, существует ли учитель
     teacher = db.query(models.User).filter(
         models.User.id == teacher_id,
         models.User.role == "teacher"
@@ -315,12 +300,10 @@ def assign_teacher_to_course(
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
 
-    # Проверяем, существует ли курс
     course = db.query(models.Course).filter(models.Course.id == course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    # Проверяем, не назначен ли уже
     existing = db.query(models.TeacherCourse).filter(
         models.TeacherCourse.teacher_id == teacher_id,
         models.TeacherCourse.course_id == course_id
@@ -344,7 +327,6 @@ def get_course_teachers(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получение списка учителей, назначенных на курс"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -362,4 +344,37 @@ def get_course_teachers(
             "full_name": t.full_name
         }
         for t in teachers
+    ]
+
+@router.get("/{course_id}/students")
+def get_course_students(
+        course_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    enrollments = db.query(models.UserCourse).filter(
+        models.UserCourse.course_id == course_id
+    ).all()
+
+    student_ids = [e.user_id for e in enrollments]
+    if not student_ids:
+        return []
+
+    students = db.query(models.User).filter(
+        models.User.id.in_(student_ids),
+        models.User.role == "student"
+    ).all()
+
+    return [
+        {
+            "id": s.id,
+            "full_name": s.full_name,
+            "email": s.email,
+            "class_name": s.class_name,
+            "progress": 0
+        }
+        for s in students
     ]

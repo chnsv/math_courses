@@ -12,7 +12,7 @@ interface Question {
     check: (ans: string) => boolean;
 }
 
-// Реальные варианты заданий ОГЭ (по 10 заданий на вариант)
+// Реальные варианты заданий ОГЭ
 const variantsQuestions: Record<number, Question[]> = {
     1: [
         { id: 1, text: 'Решите уравнение: 2x² - 5x + 2 = 0', answer: '0.5, 2', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => {
@@ -120,9 +120,9 @@ const TrialOGEPage: React.FC = () => {
 
     const correctCount = questions.filter(q => q.isCorrect === true).length;
     const variants = [
-        { number: 1, description: 'Вариант 1 — стандартный уровень сложности' },
-        { number: 2, description: 'Вариант 2 — повышенный уровень сложности' },
-        { number: 3, description: 'Вариант 3 — сложный уровень' },
+        { number: 1, description: 'Вариант 1' },
+        { number: 2, description: 'Вариант 2' },
+        { number: 3, description: 'Вариант 3' },
     ];
 
     const handleStartLearning = () => !user ? setShowAuthModal(true) : null;
@@ -137,7 +137,7 @@ const TrialOGEPage: React.FC = () => {
                 color: 'white',
                 marginBottom: '40px'
             }}>
-                <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>📝 Пробники ОГЭ</h1>
+                <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Пробники ОГЭ</h1>
                 <p style={{ fontSize: '20px', maxWidth: '700px', margin: '0 auto', opacity: 0.9 }}>
                     Тренируйтесь в формате реального экзамена с автоматической проверкой
                 </p>
@@ -146,7 +146,7 @@ const TrialOGEPage: React.FC = () => {
             {!testStarted && !testCompleted && (
                 <>
                     <div style={{ marginBottom: '50px' }}>
-                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>📖 Что это такое</h2>
+                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>Что это такое</h2>
                         <p style={{ fontSize: '16px', lineHeight: 1.6, color: '#555', textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
                             Наши пробные тесты полностью соответствуют структуре ОГЭ.
                             Вы решаете задания в формате экзамена, а система автоматически проверяет ответы
@@ -155,7 +155,7 @@ const TrialOGEPage: React.FC = () => {
                     </div>
 
                     <div style={{ marginBottom: '50px' }}>
-                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>🎯 Доступные варианты</h2>
+                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>Доступные варианты</h2>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
                             {variants.map(v => (
                                 <div key={v.number} style={{

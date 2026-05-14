@@ -10,7 +10,6 @@ router = APIRouter()
 
 @router.get("/me")
 def get_current_user_info(current_user: models.User = Depends(get_current_user)):
-    """Получение информации о текущем пользователе"""
     return {
         "id": current_user.id,
         "email": current_user.email,
@@ -30,7 +29,6 @@ def update_current_user(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Обновление информации о текущем пользователе"""
     allowed_fields = ["full_name", "class_name", "avatar_url"]
 
     for key, value in user_data.items():
@@ -62,7 +60,6 @@ def get_users(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получение списка пользователей (только для teacher/admin)"""
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -99,7 +96,6 @@ def get_user(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получение информации о конкретном пользователе"""
     if current_user.role not in ["teacher", "admin"] and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -126,7 +122,6 @@ def block_user(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Блокировка пользователя (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -146,7 +141,6 @@ def unblock_user(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Разблокировка пользователя (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -166,7 +160,6 @@ def delete_user(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Удаление пользователя (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 

@@ -76,7 +76,7 @@ const OGEPage: React.FC = () => {
 
             {/* Шкала оценок */}
             <div style={{ marginBottom: '40px', padding: '30px', backgroundColor: '#f8f9fa', borderRadius: '24px' }}>
-                <h2 style={{ textAlign: 'center' }}>📊 Шкала перевода баллов ОГЭ</h2>
+                <h2 style={{ textAlign: 'center' }}>Шкала перевода баллов ОГЭ</h2>
                 <div style={{ display: 'flex', margin: '20px 0', height: '40px', borderRadius: '20px', overflow: 'hidden' }}>
                     <div style={{ flex: 0.2, backgroundColor: '#ff6b6b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>0-7 → 2</div>
                     <div style={{ flex: 0.2, backgroundColor: '#ffa500', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>8-14 → 3</div>
@@ -87,7 +87,7 @@ const OGEPage: React.FC = () => {
 
             {/* Задания из ОГЭ */}
             <div style={{ marginBottom: '40px' }}>
-                <h2 style={{ textAlign: 'center' }}>🎯 Попробуйте задания из ОГЭ</h2>
+                <h2 style={{ textAlign: 'center' }}>Попробуйте задания из ОГЭ</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
                     {demoQuestions.map(q => (
                         <div key={q.id} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>

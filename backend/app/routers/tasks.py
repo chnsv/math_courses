@@ -7,7 +7,6 @@ from ..services.auth_service import get_current_user
 
 router = APIRouter()
 
-# Начисление XP за разные типы заданий
 XP_REWARDS = {
     'test': 10,
     'numeric': 20,
@@ -21,7 +20,6 @@ def get_tasks(
         task_type: Optional[str] = Query(None, description="Тип задачи: test, numeric, equation"),
         db: Session = Depends(get_db)
 ):
-    """Получение списка задач по теме"""
     query = db.query(models.Task).filter(models.Task.topic_id == topic_id)
 
     if task_type:
@@ -57,7 +55,6 @@ def get_task(
         task_id: int,
         db: Session = Depends(get_db)
 ):
-    """Получение задачи по ID"""
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -81,12 +78,10 @@ def submit_attempt(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Отправка ответа на задачу (с проверкой повторных попыток)"""
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Проверяем, решал ли пользователь эту задачу ранее успешно
     existing_correct = db.query(models.TaskAttempt).filter(
         models.TaskAttempt.user_id == current_user.id,
         models.TaskAttempt.task_id == task_id,
@@ -106,7 +101,6 @@ def submit_attempt(
     is_correct = False
     explanation = ""
 
-    # Проверка в зависимости от типа задачи
     if task.type == 'test':
         correct_option = db.query(models.TestOption).filter(
             models.TestOption.task_id == task_id,
@@ -144,7 +138,6 @@ def submit_attempt(
     earned_xp = XP_REWARDS.get(task.type, 10) if is_correct else 0
     score = 100 if is_correct else 0
 
-    # Сохраняем попытку
     attempt = models.TaskAttempt(
         user_id=current_user.id,
         task_id=task_id,
@@ -178,7 +171,6 @@ def delete_task(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Удаление задачи (только для admin)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -186,7 +178,6 @@ def delete_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Удаляем связанные варианты ответов для тестов
     db.query(models.TestOption).filter(models.TestOption.task_id == task_id).delete()
 
     db.delete(task)

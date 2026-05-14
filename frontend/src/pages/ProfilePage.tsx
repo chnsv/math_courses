@@ -53,9 +53,7 @@ const ProfilePage: React.FC = () => {
     const { user, logout, updateUser } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const [activeTab, setActiveTab] = useState<'profile' | 'stats' | 'students' | 'courses' | 'mycourses' | 'tests' | 'teachers' | 'catalog'>('profile');
-    const [stats, setStats] = useState<UserStats | null>(null);
-    const [achievements, setAchievements] = useState<Achievement[]>([]);
+    const [activeTab, setActiveTab] = useState<'profile' | 'stats' | 'students' | 'courses' | 'mycourses' | 'tests' | 'teachers' | 'catalog' | 'students-stats'>('profile');    const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [teachers, setTeachers] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -84,10 +82,15 @@ const ProfilePage: React.FC = () => {
     const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
     const [myCourses, setMyCourses] = useState<Course[]>([]);
 
+    const [studentTests, setStudentTests] = useState<any[]>([]);
+
     const [selectedCourseForTeacher, setSelectedCourseForTeacher] = useState<Course | null>(null);
     const [showAssignTeacherModal, setShowAssignTeacherModal] = useState(false);
     const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
     const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null);
+
+    const [studentsStats, setStudentsStats] = useState<any[]>([]);
+    const [stats, setStats] = useState<UserStats | null>(null);
 
     useEffect(() => {
         if (location.state?.activeTab) {
@@ -96,20 +99,31 @@ const ProfilePage: React.FC = () => {
     }, [location]);
 
     useEffect(() => {
-        if (user) {
-            loadData();
-            setEditForm({ full_name: user.full_name || '', class_name: user.class_name || '', avatar_url: user.avatar_url || '' });
-            if (user.role === 'admin') {
-                loadCourses();
+        const fetchData = async () => {
+            if (user) {
+                loadData();
+                setEditForm({ full_name: user.full_name || '', class_name: user.class_name || '', avatar_url: user.avatar_url || '' });
+
+                if (user.role === 'admin') {
+                    loadCourses();
+                }
+
+                if (user.role === 'teacher') {
+                    loadTeacherCourses();
+                    loadStudentsStats();
+                    const studentsRes = await api.get('/teacher/my-students').catch(() => ({ data: [] }));
+                    setStudents(studentsRes.data);
+                }
+
+                if (user.role === 'student') {
+                    loadAvailableCourses();
+                    loadMyCourses();
+                    loadMyTests();
+                }
             }
-            if (user.role === 'teacher') {
-                loadTeacherCourses();
-            }
-            if (user.role === 'student') {
-                loadAvailableCourses();
-                loadMyCourses();
-            }
-        }
+        };
+
+        fetchData();
     }, [user]);
 
     const loadData = async () => {
@@ -122,15 +136,19 @@ const ProfilePage: React.FC = () => {
             if (statsRes.data) setStats(statsRes.data);
             if (achievementsRes.data) setAchievements(achievementsRes.data);
 
-            if (user?.role === 'teacher' || user?.role === 'admin') {
+            if (user?.role === 'admin') {
                 const studentsRes = await api.get('/admin/users?role=student').catch(() => ({ data: { items: [] } }));
                 setStudents(studentsRes.data.items || []);
-            }
 
-            if (user?.role === 'admin') {
                 const teachersRes = await api.get('/admin/users?role=teacher').catch(() => ({ data: { items: [] } }));
                 setTeachers(teachersRes.data.items || []);
             }
+
+            if (user?.role === 'teacher') {
+                const studentsRes = await api.get('/teacher/my-students').catch(() => ({ data: [] }));
+                setStudents(studentsRes.data);
+            }
+
         } catch (error) {
             console.error('Ошибка загрузки:', error);
         } finally {
@@ -183,6 +201,16 @@ const ProfilePage: React.FC = () => {
         }
     };
 
+    const loadStudentsStats = async () => {
+        try {
+            const response = await api.get('/teacher/students-statistics');
+            console.log('Статистика учеников:', response.data);
+            setStudentsStats(response.data);
+        } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
+        }
+    };
+
     const assignTeacher = async () => {
         if (!selectedCourseForTeacher || !selectedTeacherId) {
             alert('Выберите учителя');
@@ -202,14 +230,30 @@ const ProfilePage: React.FC = () => {
     const filterStudents = async () => {
         setLoading(true);
         try {
-            let url = '/admin/users?role=student';
-            if (filterClass) {
-                url += `&class_name=${encodeURIComponent(filterClass)}`;
+            let url = '';
+
+            if (user?.role === 'teacher') {
+                url = '/teacher/my-students';
+                const response = await api.get(url);
+                let filteredStudents = response.data;
+
+                if (filterClass) {
+                    filteredStudents = filteredStudents.filter((s: Student) =>
+                        s.class_name?.toLowerCase().includes(filterClass.toLowerCase())
+                    );
+                }
+                setStudents(filteredStudents);
+            } else if (user?.role === 'admin') {
+                url = '/admin/users?role=student';
+                if (filterClass) {
+                    url += `&class_name=${encodeURIComponent(filterClass)}`;
+                }
+                const response = await api.get(url);
+                setStudents(response.data.items || []);
             }
-            const response = await api.get(url);
-            setStudents(response.data.items || []);
         } catch (error) {
             console.error('Ошибка фильтрации:', error);
+            alert('Ошибка при фильтрации');
         } finally {
             setLoading(false);
         }
@@ -329,6 +373,15 @@ const ProfilePage: React.FC = () => {
             setMyCourses(response.data);
         } catch (error) {
             console.error('Ошибка загрузки моих курсов:', error);
+        }
+    };
+
+    const loadMyTests = async () => {
+        try {
+            const response = await api.get('/teacher/my-tests');
+            setStudentTests(response.data);
+        } catch (error) {
+            console.error('Ошибка загрузки тестов:', error);
         }
     };
 
@@ -539,7 +592,7 @@ const ProfilePage: React.FC = () => {
                     </div>
                 )}
 
-                {(user.role === 'student' || user.role === 'teacher') && (
+                {(user.role === 'student') && (
                     <button
                         onClick={() => setActiveTab('stats')}
                         style={{
@@ -631,6 +684,22 @@ const ProfilePage: React.FC = () => {
                     </button>
                 )}
 
+                {user.role === 'teacher' && (
+                    <button
+                        onClick={() => setActiveTab('students-stats')}
+                        style={{
+                            padding: '12px 24px',
+                            backgroundColor: activeTab === 'students-stats' ? '#e94560' : 'transparent',
+                            color: activeTab === 'students-stats' ? 'white' : '#333',
+                            border: 'none',
+                            borderRadius: '8px 8px 0 0',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Статистика учеников
+                    </button>
+                )}
+
                 {user.role === 'admin' && (
                     <>
                         <button
@@ -679,7 +748,6 @@ const ProfilePage: React.FC = () => {
             {/* Вкладка профиля */}
             {activeTab === 'profile' && (
                 <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                    {/* ... содержимое профиля (оставляем как было, оно не менялось) ... */}
                 </div>
             )}
 
@@ -687,7 +755,7 @@ const ProfilePage: React.FC = () => {
             {activeTab === 'stats' && stats && (
                 <div>
                     <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', marginBottom: '30px' }}>
-                        <h2>📊 Сводная статистика</h2>
+                        <h2>Сводная статистика</h2>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '20px' }}>
                             <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '12px' }}>
                                 <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#e94560' }}>{stats.total_tasks_solved}</div>
@@ -705,7 +773,7 @@ const ProfilePage: React.FC = () => {
                     </div>
 
                     <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', marginBottom: '30px' }}>
-                        <h2>📈 Прогресс до следующего уровня</h2>
+                        <h2>Прогресс до следующего уровня</h2>
                         <div style={{ marginBottom: '10px' }}>
                             <span>Уровень {stats.current_level}</span> → <span>Уровень {stats.current_level + 1}</span>
                         </div>
@@ -720,7 +788,7 @@ const ProfilePage: React.FC = () => {
 
                     {stats.weak_topics && stats.weak_topics.length > 0 && (
                         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
-                            <h2>⚠️ Слабые места</h2>
+                            <h2>Слабые места</h2>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '15px' }}>
                                 {stats.weak_topics.map((topic, idx) => (
                                     <div key={idx}>
@@ -766,7 +834,7 @@ const ProfilePage: React.FC = () => {
             {/* Вкладка "Доступные курсы" для ученика */}
             {user.role === 'student' && activeTab === 'courses' && (
                 <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
-                    <h2>📚 Доступные курсы</h2>
+                    <h2>Доступные курсы</h2>
                     <p style={{ marginBottom: '20px', color: '#666' }}>Выберите курс для обучения</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                         {availableCourses.map(course => (
@@ -800,7 +868,7 @@ const ProfilePage: React.FC = () => {
             {/* Вкладка "Мои курсы" для ученика */}
             {user.role === 'student' && activeTab === 'mycourses' && (
                 <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
-                    <h2>📖 Мои курсы</h2>
+                    <h2>Мои курсы</h2>
                     <p style={{ marginBottom: '20px', color: '#666' }}>Курсы, на которые вы записаны</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                         {myCourses.map(course => (
@@ -833,16 +901,36 @@ const ProfilePage: React.FC = () => {
 
             {/* Вкладка для ученика: Тесты */}
             {user.role === 'student' && activeTab === 'tests' && (
-                <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
-                    <h2>Тесты</h2>
-                    <p>Доступные тесты для проверки знаний</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                        <div style={{ border: '1px solid #ddd', borderRadius: '12px', padding: '20px' }}>
-                            <h3>Тест: Линейные уравнения</h3>
-                            <p>10 вопросов • 30 минут</p>
-                            <button style={{ marginTop: '15px', padding: '8px 20px', backgroundColor: '#e94560', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer' }}>Начать тест</button>
+                <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <h2 style={{ marginBottom: '20px' }}>Мои тесты</h2>
+                    {studentTests.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: '#666' }}>У вас пока нет назначенных тестов</p>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                            {studentTests.map(test => (
+                                <div key={test.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '20px', backgroundColor: '#fff' }}>
+                                    <h3 style={{ marginBottom: '10px' }}>{test.title}</h3>
+                                    <p style={{ color: '#666', marginBottom: '10px' }}>{test.description}</p>
+                                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                                        ⏱️ {test.duration_minutes} минут • Статус: {test.status === 'pending' ? 'Ожидает' : 'В процессе'}
+                                    </p>
+                                    <button
+                                        onClick={() => navigate(`/student/test/${test.id}/assignment/${test.assignment_id}`)}
+                                        style={{
+                                            padding: '8px 20px',
+                                            backgroundColor: '#e94560',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '20px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Начать тест
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
 
@@ -869,7 +957,6 @@ const ProfilePage: React.FC = () => {
                                     <th style={{ padding: '12px' }}>ФИО</th>
                                     <th style={{ padding: '12px' }}>Email</th>
                                     <th style={{ padding: '12px' }}>Класс</th>
-                                    <th style={{ padding: '12px' }}>Успеваемость</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -878,14 +965,6 @@ const ProfilePage: React.FC = () => {
                                         <td style={{ padding: '12px' }}>{s.full_name || s.email}</td>
                                         <td style={{ padding: '12px' }}>{s.email}</td>
                                         <td style={{ padding: '12px' }}>{s.class_name || '—'}</td>
-                                        <td style={{ padding: '12px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '80px', height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-                                                    <div style={{ width: `${s.correct_percent || 0}%`, height: '100%', backgroundColor: (s.correct_percent || 0) >= 70 ? '#4CAF50' : (s.correct_percent || 0) >= 40 ? '#ffd700' : '#ff6b6b' }} />
-                                                </div>
-                                                <span>{s.correct_percent || 0}%</span>
-                                            </div>
-                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -1032,6 +1111,90 @@ const ProfilePage: React.FC = () => {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Вкладка статистики учеников для учителя */}
+            {activeTab === 'students-stats' && (
+                <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h2>Статистика учеников</h2>
+                        <button
+                            onClick={async () => {
+                                const XLSX = await import('xlsx');
+
+                                const excelData = studentsStats.map(s => ({
+                                    'ФИО': s.full_name,
+                                    'Email': s.email,
+                                    'Класс': s.class_name,
+                                    'Решено задач': s.total_tasks,
+                                    'Правильно': s.correct_tasks,
+                                    'Успеваемость (%)': s.success_rate,
+                                    'Тестов пройдено': s.tests_completed,
+                                    'Средний балл': s.avg_test_score
+                                }));
+
+                                const ws = XLSX.utils.json_to_sheet(excelData);
+                                const wb = XLSX.utils.book_new();
+                                XLSX.utils.book_append_sheet(wb, ws, 'Статистика учеников');
+
+                                ws['!cols'] = [
+                                    { wch: 25 },
+                                    { wch: 25 },
+                                    { wch: 12 },
+                                    { wch: 12 },
+                                    { wch: 10 },
+                                    { wch: 15 },
+                                    { wch: 15 },
+                                    { wch: 12 }
+                                ];
+
+                                XLSX.writeFile(wb, `students_statistics_${new Date().toISOString().split('T')[0]}.xlsx`);
+                            }}
+                            style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                            Экспорт в Excel
+                        </button>
+                    </div>
+                    {studentsStats.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: '#666' }}>Нет данных об учениках</p>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid #ddd' }}>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>ФИО</th>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>Email</th>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>Класс</th>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>Решено задач</th>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>Правильно</th>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>Успеваемость</th>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>Тестов пройдено</th>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>Средний балл</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {studentsStats.map(s => (
+                                        <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
+                                            <td style={{ padding: '12px' }}>{s.full_name}</td>
+                                            <td style={{ padding: '12px' }}>{s.email}</td>
+                                            <td style={{ padding: '12px' }}>{s.class_name}</td>
+                                            <td style={{ padding: '12px' }}>{s.total_tasks}</td>
+                                            <td style={{ padding: '12px' }}>{s.correct_tasks}</td>
+                                            <td style={{ padding: '12px' }}>
+                                                <div style={{ width: '80px', height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
+                                                    <div style={{ width: `${s.success_rate}%`, height: '100%', backgroundColor: s.success_rate >= 70 ? '#4CAF50' : s.success_rate >= 40 ? '#ffd700' : '#ff6b6b' }} />
+                                                </div>
+                                                {s.success_rate}%
+                                            </td>
+                                            <td style={{ padding: '12px' }}>{s.tests_completed}</td>
+                                            <td style={{ padding: '12px' }}>{s.avg_test_score}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>

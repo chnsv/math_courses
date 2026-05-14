@@ -22,8 +22,8 @@ const Algebra7_8Page: React.FC = () => {
 
     const checkEquation = () => {
         const numAnswer = parseFloat(userAnswer);
-        if (!isNaN(numAnswer) && Math.abs(numAnswer - demoEquation.answer) < 0.01) setEquationMessage('✓ Правильно!');
-        else if (userAnswer) setEquationMessage('✗ Неверно. Попробуйте ещё раз!');
+        if (!isNaN(numAnswer) && Math.abs(numAnswer - demoEquation.answer) < 0.01) setEquationMessage('Правильно!');
+        else if (userAnswer) setEquationMessage('Неверно. Попробуйте ещё раз!');
     };
 
     const topics = [
@@ -45,7 +45,7 @@ const Algebra7_8Page: React.FC = () => {
 
             {/* Живой график */}
             <div style={{ marginBottom: '40px', padding: '30px', backgroundColor: '#f0f7ff', borderRadius: '24px' }}>
-                <h2 style={{ textAlign: 'center' }}>📈 Живой график функции y = 2x² + 3x - 5</h2>
+                <h2 style={{ textAlign: 'center' }}>Живой график функции y = 2x² + 3x - 5</h2>
                 <label style={{ display: 'block', textAlign: 'center', marginBottom: '20px' }}>x = <input type="range" min="-5" max="5" step="0.5" value={xValue} onChange={(e) => setXValue(parseFloat(e.target.value))} /></label>
                 <div style={{ textAlign: 'center', fontSize: '18px' }}>Значение функции: y = {2 * xValue * xValue + 3 * xValue - 5}</div>
                 <div style={{ marginTop: '20px', textAlign: 'center' }}><svg width="400" height="200" viewBox="0 0 400 200"><line x1="0" y1="100" x2="400" y2="100" stroke="gray" strokeWidth="1" /><line x1="200" y1="0" x2="200" y2="200" stroke="gray" strokeWidth="1" /><circle cx={200 + xValue * 30} cy={100 - (2 * xValue * xValue + 3 * xValue - 5) * 2} r="6" fill="#e94560" /></svg></div>
@@ -53,7 +53,7 @@ const Algebra7_8Page: React.FC = () => {
 
             {/* Генератор уравнений */}
             <div style={{ marginBottom: '40px', padding: '30px', backgroundColor: '#f8f9fa', borderRadius: '24px', textAlign: 'center' }}>
-                <h2>✖️ Генератор уравнений</h2>
+                <h2>Генератор уравнений</h2>
                 <div style={{ fontSize: '28px', margin: '20px 0', fontWeight: 'bold' }}>{demoEquation.text}</div>
                 <input type="number" placeholder="x = ?" value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', width: '150px', marginRight: '10px' }} />
                 <button onClick={checkEquation} style={{ padding: '10px 20px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Проверить</button>

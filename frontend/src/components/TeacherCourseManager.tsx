@@ -58,11 +58,18 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [selectedTestForAssign, setSelectedTestForAssign] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [courseStudents, setCourseStudents] = useState<any[]>([]);
+    const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
+    const [courseStudentsList, setCourseStudentsList] = useState<any[]>([]);
+
+    const [studentsStats, setStudentsStats] = useState<any[]>([]);
+    const [loadingStats, setLoadingStats] = useState(false);
 
     useEffect(() => {
         loadTopics();
         loadTests();
         loadStudents();
+        loadStudentsStats();
     }, []);
 
     const loadTopics = async () => {
@@ -76,7 +83,8 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
 
     const loadTests = async () => {
         try {
-            const response = await api.get('/teacher/tests');
+            const response = await api.get(`/teacher/courses/${course.id}/tests`);
+            console.log('Загруженные тесты:', response.data);
             setTests(response.data);
         } catch (error) {
             console.error('Ошибка загрузки тестов:', error);
@@ -85,8 +93,9 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
 
     const loadStudents = async () => {
         try {
-            const response = await api.get('/admin/users?role=student');
-            setStudents(response.data.items || []);
+            const response = await api.get(`/courses/${course.id}/students`);
+            console.log('Ученики курса:', response.data);
+            setCourseStudentsList(response.data);
         } catch (error) {
             console.error('Ошибка загрузки учеников:', error);
         }
@@ -107,6 +116,56 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
             setTasks(response.data);
         } catch (error) {
             console.error('Ошибка загрузки задач:', error);
+        }
+    };
+
+    const loadCourseStudents = async () => {
+        try {
+            const response = await api.get(`/admin/users?role=student&course_id=${course.id}`);
+            setCourseStudents(response.data.items || []);
+        } catch (error) {
+            console.error('Ошибка загрузки учеников курса:', error);
+        }
+    };
+
+    const loadCourseStudentsList = async () => {
+        try {
+            const response = await api.get(`/courses/${course.id}/students`);
+            console.log('Ученики курса:', response.data);
+            setCourseStudentsList(response.data);
+        } catch (error) {
+            console.error('Ошибка загрузки учеников курса:', error);
+        }
+    };
+
+    const loadStudentsStats = async () => {
+        setLoadingStats(true);
+        try {
+            const response = await api.get('/teacher/students-statistics');
+            setStudentsStats(response.data);
+        } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
+        } finally {
+            setLoadingStats(false);
+        }
+    };
+
+    const assignTestToStudents = async () => {
+        if (!selectedTestForAssign) return;
+        if (selectedStudents.length === 0) {
+            alert('Выберите хотя бы одного ученика');
+            return;
+        }
+        try {
+            await api.post(`/teacher/tests/${selectedTestForAssign.id}/assign`, {
+                student_ids: selectedStudents
+            });
+            alert('Тест назначен ученикам');
+            setShowAssignModal(false);
+            setSelectedStudents([]);
+            setSelectedTestForAssign(null);
+        } catch (error) {
+            alert('Ошибка назначения');
         }
     };
 
@@ -230,23 +289,74 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         }
     };
 
+    const addTest = async () => {
+        if (!newTest.title) {
+            alert('Введите название теста');
+            return;
+        }
+
+        if (!newTest.selectedTheoryBlocks || newTest.selectedTheoryBlocks.length === 0) {
+            alert('Выберите хотя бы одну подтему для генерации заданий');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await api.post('/teacher/tests', {
+                course_id: course.id,
+                title: newTest.title,
+                description: newTest.description,
+                duration_minutes: newTest.duration_minutes,
+                theory_block_ids: newTest.selectedTheoryBlocks
+            });
+
+            console.log('Тест создан:', response.data);
+
+            setShowAddTestModal(false);
+            setNewTest({
+                title: '',
+                description: '',
+                duration_minutes: 45,
+                selectedTheoryBlocks: []
+            });
+            await loadTests();
+            alert('Контрольная работа создана! Количество вопросов: ' +
+                  (response.data.questions_count || 'неизвестно'));
+        } catch (error: any) {
+            console.error('Ошибка создания:', error);
+            alert(error.response?.data?.detail || 'Ошибка создания');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const addTask = async () => {
-        if (!selectedTopic) return;
+        if (!selectedTopic) {
+            alert('Тема не выбрана');
+            return;
+        }
         if (!newTask.question_text || !newTask.correct_answer) {
             alert('Заполните текст задачи и правильный ответ');
             return;
         }
-        setLoading(true);
         try {
-            await api.post(`/teacher/topics/${selectedTopic.id}/tasks`, newTask);
+            const taskData = {
+                topic_id: selectedTopic.id,
+                type: newTask.type,
+                question_text: newTask.question_text,
+                correct_answer: newTask.correct_answer,
+                difficulty: newTask.difficulty,
+                theory_block_id: newTask.theory_block_id || null
+            };
+            console.log('Отправка задачи:', taskData);
+            await api.post(`/teacher/topics/${selectedTopic.id}/tasks`, taskData);
             setShowAddTaskModal(false);
-            setNewTask({ type: 'equation', question_text: '', correct_answer: '', difficulty: 1, parameters: null });
+            setNewTask({ type: 'equation', question_text: '', correct_answer: '', difficulty: 1, parameters: null, theory_block_id: null });
             loadTasks(selectedTopic.id);
             alert('Задача добавлена');
-        } catch (error) {
-            alert('Ошибка добавления');
-        } finally {
-            setLoading(false);
+        } catch (error: any) {
+            console.error('Ошибка добавления:', error);
+            alert(error.response?.data?.detail || 'Ошибка добавления');
         }
     };
 
@@ -284,28 +394,6 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         }
     };
 
-    const addTest = async () => {
-        if (!newTest.title) {
-            alert('Введите название теста');
-            return;
-        }
-        setLoading(true);
-        try {
-            await api.post('/teacher/tests', {
-                ...newTest,
-                course_id: course.id,
-                topic_ids: selectedTopic ? [selectedTopic.id] : []
-            });
-            setShowAddTestModal(false);
-            setNewTest({ title: '', description: '', duration_minutes: 45, selectedTasks: [] });
-            loadTests();
-            alert('Тест создан');
-        } catch (error) {
-            alert('Ошибка создания');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const deleteTest = async (testId: number) => {
         if (confirm('Удалить тест?')) {
@@ -422,25 +510,35 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                     </div>
                 )}
 
-                {/* Задачи */}
                 {activeSubtab === 'tasks' && selectedTopic && (
                     <div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-                            <button onClick={() => setShowAddTaskModal(true)} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>+ Добавить задачу</button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3>Задачи по теме: {selectedTopic.title}</h3>
+                            <button onClick={() => {
+                                if (!selectedTopic) {
+                                    alert('Сначала выберите тему');
+                                    return;
+                                }
+                                setShowAddTaskModal(true);
+                            }} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                                + Добавить задачу
+                            </button>
                         </div>
-                        <h3 style={{ marginBottom: '15px' }}>Задачи по теме: {selectedTopic.title}</h3>
+
                         {tasks.length === 0 ? (
-                            <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Нет задач. Добавьте первую</p>
+                            <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Нет задач. Добавьте первую задачу</p>
                         ) : (
                             <div style={{ display: 'grid', gap: '15px' }}>
                                 {tasks.map(task => (
-                                    <div key={task.id} style={{ border: '1px solid #eee', borderRadius: '12px', padding: '15px', backgroundColor: '#f9f9f9' }}>
+                                    <div key={task.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '15px', backgroundColor: '#fff' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                             <div style={{ flex: 1 }}>
-                                                <span style={{ display: 'inline-block', padding: '2px 8px', backgroundColor: task.type === 'equation' ? '#667eea' : task.type === 'numeric' ? '#4CAF50' : '#ff9800', color: 'white', borderRadius: '20px', fontSize: '12px', marginBottom: '10px' }}>
-                                                    {task.type === 'equation' ? 'Уравнение' : task.type === 'numeric' ? 'Числовая' : 'Тест'}
-                                                </span>
-                                                <div dangerouslySetInnerHTML={{ __html: task.question_text }} style={{ marginBottom: '10px' }} />
+                                                <div style={{ marginBottom: '10px' }}>
+                                                    <span style={{ display: 'inline-block', padding: '2px 8px', backgroundColor: task.type === 'equation' ? '#667eea' : task.type === 'numeric' ? '#4CAF50' : '#ff9800', color: 'white', borderRadius: '20px', fontSize: '12px' }}>
+                                                        {task.type === 'equation' ? 'Уравнение' : task.type === 'numeric' ? 'Числовая задача' : 'Тест'}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '16px', marginBottom: '10px', lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: task.question_text }} />
                                                 <div style={{ fontSize: '14px', color: '#666' }}>Ответ: {task.correct_answer}</div>
                                             </div>
                                             <div>
@@ -455,27 +553,37 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                     </div>
                 )}
 
-                {/* Контрольные работы */}
+                {/* Вкладка Контрольные работы */}
                 {activeSubtab === 'tests' && (
                     <div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-                            <button onClick={() => setShowAddTestModal(true)} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>+ Создать контрольную работу</button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3>Контрольные работы по курсу</h3>
+                            <button onClick={() => setShowAddTestModal(true)} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                                + Создать контрольную работу
+                            </button>
                         </div>
+
                         {tests.length === 0 ? (
                             <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Нет созданных контрольных работ</p>
                         ) : (
                             <div style={{ display: 'grid', gap: '15px' }}>
                                 {tests.map(test => (
-                                    <div key={test.id} style={{ border: '1px solid #eee', borderRadius: '12px', padding: '15px', backgroundColor: '#f9f9f9' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div key={test.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '20px', backgroundColor: '#fff' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
                                             <div>
-                                                <strong style={{ fontSize: '16px' }}>{test.title}</strong>
-                                                <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>{test.description}</p>
-                                                <p style={{ fontSize: '12px', color: '#666' }}>Длительность: {test.duration_minutes} минут</p>
+                                                <h4 style={{ marginBottom: '5px' }}>{test.title}</h4>
+                                                <p style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>{test.description}</p>
+                                                <p style={{ fontSize: '12px', color: '#666' }}>Время: {test.duration_minutes} минут</p>
                                             </div>
                                             <div>
-                                                <button onClick={() => { setSelectedTestForAssign(test); setShowAssignModal(true); }} style={{ backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '5px', cursor: 'pointer' }}>📋 Назначить</button>
-                                                <button onClick={() => deleteTest(test.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🗑️</button>
+                                                <button onClick={() => {
+                                                    setSelectedTestForAssign(test);
+                                                    loadCourseStudentsList();
+                                                    setShowAssignModal(true);
+                                                }} style={{ backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', marginRight: '5px', cursor: 'pointer' }}>
+                                                    Назначить
+                                                </button>
+                                                <button onClick={() => deleteTest(test.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}>🗑️ Удалить</button>
                                             </div>
                                         </div>
                                     </div>
@@ -519,7 +627,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px' }}>
                             <h3>Добавить теорию</h3>
                             <input type="text" placeholder="Заголовок" value={newTheory.title} onChange={(e) => setNewTheory({ ...newTheory, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <textarea placeholder="Содержание (поддерживается LaTeX: $$...$$)" value={newTheory.content} onChange={(e) => setNewTheory({ ...newTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <textarea placeholder="Содержание" value={newTheory.content} onChange={(e) => setNewTheory({ ...newTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setShowAddTheoryModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                                 <button onClick={addTheoryBlock} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Добавить</button>
@@ -533,7 +641,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px' }}>
                             <h3>Редактировать теорию</h3>
                             <input type="text" placeholder="Заголовок" value={editingTheory.title} onChange={(e) => setEditingTheory({ ...editingTheory, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <textarea placeholder="Содержание (поддерживается LaTeX: $$...$$)" value={editingTheory.content} onChange={(e) => setEditingTheory({ ...editingTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <textarea placeholder="Содержание" value={editingTheory.content} onChange={(e) => setEditingTheory({ ...editingTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setEditingTheory(null)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                                 <button onClick={updateTheoryBlock} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Сохранить</button>
@@ -542,18 +650,47 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                     </div>
                 )}
 
+                {/* Модальное окно добавления задачи */}
                 {showAddTaskModal && selectedTopic && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
-                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px' }}>
-                            <h3>Добавить задачу</h3>
+                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px', maxWidth: '90%' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h3>Добавить задачу</h3>
+                                <button onClick={() => {
+                                    if (!selectedTopic) {
+                                        alert('Сначала выберите тему');
+                                        return;
+                                    }
+                                    setShowAddTaskModal(true);
+                                }} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                                    + Добавить задачу
+                                </button>
+                            </div>
+
+                            {/* Выбор подтемы (блока теории) */}
+                            <select
+                                value={newTask.theory_block_id || ''}
+                                onChange={(e) => setNewTask({ ...newTask, theory_block_id: e.target.value ? parseInt(e.target.value) : null })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            >
+                                <option value="">Выберите подтему</option>
+                                {theoryBlocks.map(block => (
+                                    <option key={block.id} value={block.id}>{block.title}</option>
+                                ))}
+                            </select>
+
                             <select value={newTask.type} onChange={(e) => setNewTask({ ...newTask, type: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}>
                                 <option value="equation">Уравнение</option>
                                 <option value="numeric">Числовая задача</option>
                                 <option value="test">Тест</option>
                             </select>
-                            <textarea placeholder="Текст задачи (поддержка LaTeX: $$...$$)" value={newTask.question_text} onChange={(e) => setNewTask({ ...newTask, question_text: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+
+                            <textarea placeholder="Текст задачи" value={newTask.question_text} onChange={(e) => setNewTask({ ...newTask, question_text: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+
                             <input type="text" placeholder="Правильный ответ" value={newTask.correct_answer} onChange={(e) => setNewTask({ ...newTask, correct_answer: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+
                             <input type="number" placeholder="Сложность (1-5)" value={newTask.difficulty} onChange={(e) => setNewTask({ ...newTask, difficulty: parseInt(e.target.value) })} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setShowAddTaskModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                                 <button onClick={addTask} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Добавить</button>
@@ -562,61 +699,89 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                     </div>
                 )}
 
-                {editingTask && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
-                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px' }}>
-                            <h3>Редактировать задачу</h3>
-                            <select value={editingTask.type} onChange={(e) => setEditingTask({ ...editingTask, type: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}>
-                                <option value="equation">Уравнение</option>
-                                <option value="numeric">Числовая задача</option>
-                                <option value="test">Тест</option>
-                            </select>
-                            <textarea placeholder="Текст задачи" value={editingTask.question_text} onChange={(e) => setEditingTask({ ...editingTask, question_text: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <input type="text" placeholder="Правильный ответ" value={editingTask.correct_answer} onChange={(e) => setEditingTask({ ...editingTask, correct_answer: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                <button onClick={() => setEditingTask(null)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
-                                <button onClick={updateTask} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Сохранить</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {showAddTestModal && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
-                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '400px' }}>
-                            <h3>Создать контрольную работу</h3>
-                            <input type="text" placeholder="Название" value={newTest.title} onChange={(e) => setNewTest({ ...newTest, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <textarea placeholder="Описание" value={newTest.description} onChange={(e) => setNewTest({ ...newTest, description: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <input type="number" placeholder="Длительность (минуты)" value={newTest.duration_minutes} onChange={(e) => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) })} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                <button onClick={() => setShowAddTestModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
-                                <button onClick={addTest} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Создать</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {showAssignModal && selectedTestForAssign && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
-                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px' }}>
-                            <h3>Назначить тест "{selectedTestForAssign.title}" ученикам</h3>
-                            <div style={{ maxHeight: '300px', overflow: 'auto', marginBottom: '20px' }}>
-                                {students.map(student => (
-                                    <label key={student.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderBottom: '1px solid #eee' }}>
-                                        <input type="checkbox" checked={newTest.selectedTasks.includes(student.id)} onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setNewTest({ ...newTest, selectedTasks: [...newTest.selectedTasks, student.id] });
-                                            } else {
-                                                setNewTest({ ...newTest, selectedTasks: newTest.selectedTasks.filter(id => id !== student.id) });
-                                            }
-                                        }} />
-                                        <span>{student.full_name || student.email} ({student.class_name || 'Класс не указан'})</span>
+                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px', maxWidth: '90%', maxHeight: '80vh', overflow: 'auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h3>Назначить тест "{selectedTestForAssign.title}" ученикам</h3>
+                                <button onClick={() => { setShowAssignModal(false); setSelectedTestForAssign(null); setSelectedStudents([]); }} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+                            </div>
+
+                            <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }}>
+                                {courseStudentsList.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: '#666' }}>Нет учеников, записанных на этот курс</p>
+                                ) : (
+                                    courseStudentsList.map(student => (
+                                        <label key={student.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderBottom: '1px solid #eee', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedStudents.includes(student.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedStudents([...selectedStudents, student.id]);
+                                                    } else {
+                                                        setSelectedStudents(selectedStudents.filter(id => id !== student.id));
+                                                    }
+                                                }}
+                                            />
+                                            <span>{student.full_name || student.email} ({student.class_name || 'Класс не указан'})</span>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                                <button onClick={() => { setShowAssignModal(false); setSelectedTestForAssign(null); setSelectedStudents([]); }} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
+                                <button onClick={assignTestToStudents} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Назначить</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Модальное окно создания контрольной работы */}
+                {showAddTestModal && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
+                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px', maxWidth: '90%', maxHeight: '80vh', overflow: 'auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h3>Создать контрольную работу</h3>
+                                <button onClick={() => setShowAddTestModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+                            </div>
+
+                            <input type="text" placeholder="Название" value={newTest.title} onChange={(e) => setNewTest({ ...newTest, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+
+                            <textarea placeholder="Описание" value={newTest.description} onChange={(e) => setNewTest({ ...newTest, description: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+
+                            <input type="number" placeholder="Длительность (минуты)" value={newTest.duration_minutes} onChange={(e) => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) })} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+
+                            <h4 style={{ marginBottom: '10px' }}>Выберите подтемы для контрольной работы</h4>
+                            <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }}>
+                                {theoryBlocks.map(block => (
+                                    <label key={block.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderBottom: '1px solid #eee', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={newTest.selectedTheoryBlocks?.includes(block.id)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setNewTest({
+                                                        ...newTest,
+                                                        selectedTheoryBlocks: [...(newTest.selectedTheoryBlocks || []), block.id]
+                                                    });
+                                                } else {
+                                                    setNewTest({
+                                                        ...newTest,
+                                                        selectedTheoryBlocks: (newTest.selectedTheoryBlocks || []).filter(id => id !== block.id)
+                                                    });
+                                                }
+                                            }}
+                                        />
+                                        <span>{block.title}</span>
                                     </label>
                                 ))}
                             </div>
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                <button onClick={() => { setShowAssignModal(false); setSelectedTestForAssign(null); setNewTest({ ...newTest, selectedTasks: [] }); }} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
-                                <button onClick={assignTest} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Назначить</button>
+
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                                <button onClick={() => setShowAddTestModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
+                                <button onClick={addTest} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Создать</button>
                             </div>
                         </div>
                     </div>
