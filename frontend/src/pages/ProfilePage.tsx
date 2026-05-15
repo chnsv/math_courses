@@ -178,7 +178,7 @@ const ProfilePage: React.FC = () => {
 
     const loadCourseTopics = async (courseId: number) => {
         try {
-            const response = await api.get(`/courses/${courseId}/topics/`);
+            const response = await api.get(`/courses/${courseId}/topics`);
             setCourseTopics(response.data);
         } catch (error) {
             console.error('Ошибка загрузки тем:', error);
@@ -356,6 +356,19 @@ const ProfilePage: React.FC = () => {
                 alert('Учитель удален');
             } catch (error) {
                 alert('Ошибка удаления');
+            }
+        }
+    };
+
+    const deleteCourse = async (courseId: number) => {
+        if (confirm('Вы уверены, что хотите удалить этот курс? Будут удалены все темы, теория и задачи курса.')) {
+            try {
+                await api.delete(`/courses/${courseId}`);
+                loadCourses();
+                alert('Курс удален');
+            } catch (error) {
+                console.error('Ошибка удаления курса:', error);
+                alert('Ошибка при удалении курса');
             }
         }
     };
@@ -1087,9 +1100,10 @@ const ProfilePage: React.FC = () => {
                                     <h3>{course.title}</h3>
                                     <p style={{ fontSize: '12px', color: '#666' }}>{course.description}</p>
                                 </div>
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                    <button onClick={() => { setSelectedCourseForStudents(course); loadCourseStudents(course.id); }} style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Ученики</button>
-                                    <button onClick={() => { setSelectedCourseForTeacher(course); setShowAssignTeacherModal(true); loadAvailableTeachers(); }}  style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }} > Назначить учителя </button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                                    <button onClick={() => { setSelectedCourseForStudents(course); loadCourseStudents(course.id); }} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%' }}>Ученики</button>
+                                    <button onClick={() => { setSelectedCourseForTeacher(course); setShowAssignTeacherModal(true); loadAvailableTeachers(); }} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%' }}>Назначить учителя</button>
+                                    <button onClick={() => deleteCourse(course.id)} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%' }}>Удалить</button>
                                 </div>
                             </div>
                         ))}
@@ -1234,33 +1248,37 @@ const ProfilePage: React.FC = () => {
 
             {selectedCourseForStudents && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '600px', maxWidth: '90%', maxHeight: '80vh', overflow: 'auto' }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '700px', maxWidth: '90%', maxHeight: '80vh', overflow: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3>Ученики курса "{selectedCourseForStudents.title}"</h3>
-                            <button onClick={() => setSelectedCourseForStudents(null)} style={{ background: 'none', border: 'none', fontSize: '28px', cursor: 'pointer' }}>&times;</button>
+                            <button onClick={() => setSelectedCourseForStudents(null)} style={{ background: 'none', border: 'none', fontSize: '28px', cursor: 'pointer', color: '#333' }}>&times;</button>
                         </div>
                         {courseStudents.length === 0 ? <p>Нет записанных учеников</p> : (
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr>
-                                        <th style={{ padding: '10px', textAlign: 'left' }}>ФИО</th>
-                                        <th style={{ padding: '10px', textAlign: 'left' }}>Класс</th>
-                                        <th style={{ padding: '10px', textAlign: 'left' }}>Прогресс</th>
-                                        <th style={{ padding: '10px', textAlign: 'left' }}>Баллы</th>
+                                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>ФИО</th>
+                                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Класс</th>
+                                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Прогресс</th>
+                                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>XP</th>
+                                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Уровень</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {courseStudents.map(s => (
-                                        <tr key={s.id}>
+                                        <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
                                             <td style={{ padding: '10px' }}>{s.full_name || s.email}</td>
                                             <td style={{ padding: '10px' }}>{s.class_name || '—'}</td>
                                             <td style={{ padding: '10px' }}>
-                                                <div style={{ width: '80px', height: '6px', backgroundColor: '#e0e0e0', borderRadius: '3px', overflow: 'hidden' }}>
-                                                    <div style={{ width: `${s.progress || 0}%`, height: '100%', backgroundColor: '#4CAF50' }} />
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div style={{ width: '100px', height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${s.progress || 0}%`, height: '100%', backgroundColor: '#4CAF50' }} />
+                                                    </div>
+                                                    <span>{s.progress || 0}%</span>
                                                 </div>
-                                                {s.progress || 0}%
                                             </td>
                                             <td style={{ padding: '10px' }}>{s.xp || 0}</td>
+                                            <td style={{ padding: '10px' }}>{s.level || 1}</td>
                                         </tr>
                                     ))}
                                 </tbody>

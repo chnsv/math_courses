@@ -41,7 +41,7 @@ def get_course_topics(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "teacher":
+    if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     topics = db.query(models.Topic).filter(
@@ -49,7 +49,6 @@ def get_course_topics(
     ).order_by(models.Topic.order_index).all()
 
     return topics
-
 
 @router.post("/courses/{course_id}/topics")
 def create_topic(

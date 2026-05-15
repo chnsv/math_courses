@@ -346,6 +346,7 @@ def get_course_teachers(
         for t in teachers
     ]
 
+
 @router.get("/{course_id}/students")
 def get_course_students(
         course_id: int,
@@ -368,13 +369,73 @@ def get_course_students(
         models.User.role == "student"
     ).all()
 
-    return [
-        {
-            "id": s.id,
-            "full_name": s.full_name,
-            "email": s.email,
-            "class_name": s.class_name,
-            "progress": 0
-        }
-        for s in students
-    ]
+    result = []
+    for student in students:
+        enrollment = next((e for e in enrollments if e.user_id == student.id), None)
+        progress = enrollment.progress if enrollment and enrollment.progress else 0
+
+        if progress == 0:
+            topics = db.query(models.Topic).filter(models.Topic.course_id == course_id).all()
+            if topics:
+                total_topics = len(topics)
+                completed_topics = 0
+                for topic in topics:
+                    tasks = db.query(models.Task).filter(models.Task.topic_id == topic.id).all()
+                    task_ids = [t.id for t in tasks]
+                    if task_ids:
+                        correct_tasks = db.query(models.TaskAttempt.task_id).filter(
+                            models.TaskAttempt.user_id == student.id,
+                            models.TaskAttempt.task_id.in_(task_ids),
+                            models.TaskAttempt.is_correct == True
+                        ).distinct().count()
+                        if correct_tasks == len(task_ids) and len(task_ids) > 0:
+                            completed_topics += 1
+                progress = int((completed_topics / total_topics * 100) if total_topics > 0 else 0)
+                if enrollment:
+                    enrollment.progress = progress
+                    db.commit()
+
+        result.append({
+            "id": student.id,
+            "full_name": student.full_name or student.email,
+            "email": student.email,
+            "class_name": student.class_name or "—",
+            "progress": progress,
+            "xp": student.xp or 0,
+            "level": student.level or 1
+        })
+
+    return result
+
+@router.delete("/{course_id}")
+def delete_course(
+        course_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    db.delete(course)
+    db.commit()
+
+    return {"message": "Course deleted"}
+
+@router.get("/{course_id}/topics")
+def get_course_topics(
+        course_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role not in ["teacher", "admin", "student"]:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    topics = db.query(models.Topic).filter(
+        models.Topic.course_id == course_id
+    ).order_by(models.Topic.order_index).all()
+
+    return topics
