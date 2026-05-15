@@ -53,7 +53,9 @@ const ProfilePage: React.FC = () => {
     const { user, logout, updateUser } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const [activeTab, setActiveTab] = useState<'profile' | 'stats' | 'students' | 'courses' | 'mycourses' | 'tests' | 'teachers' | 'catalog' | 'students-stats'>('profile');    const [achievements, setAchievements] = useState<Achievement[]>([]);
+    const [activeTab, setActiveTab] = useState<'profile' | 'stats' | 'students' | 'courses'
+    | 'mycourses' | 'tests' | 'teachers' | 'catalog' | 'students-stats'>('profile');
+    const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [teachers, setTeachers] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);

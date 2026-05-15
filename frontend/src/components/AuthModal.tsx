@@ -319,7 +319,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                             </button>
                         </form>
 
-                        {/* Кнопка "Забыли пароль?"
+                        {/* Кнопка "Забыли пароль?"*/}
                         {isLogin && (
                             <div style={{ textAlign: 'center', marginTop: '15px' }}>
                                 <button
@@ -336,7 +336,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                                     Забыли пароль?
                                 </button>
                             </div>
-                        )}*/}
+                        )}
 
                         <p style={{ textAlign: 'center', marginTop: '20px', color: '#666' }}>
                             {isLogin ? 'Нет аккаунта? ' : 'Уже есть аккаунт? '}

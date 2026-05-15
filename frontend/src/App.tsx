@@ -5,7 +5,7 @@ import HomePage from './pages/HomePage';
 import TopicsPage from './pages/TopicsPage';
 import TasksPage from './pages/TasksPage';
 import TheoryPage from './pages/TheoryPage';
-//import ReviewsPage from './pages/ReviewsPage';
+import ReviewsPage from './pages/ReviewsPage';
 import AboutPage from './pages/AboutPage';
 import Math5_6Page from './pages/Math5_6Page';
 import Algebra7_8Page from './pages/Algebra7_8Page';
@@ -27,17 +27,6 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return user ? <>{children}</> : <Navigate to="/" />;
 };
 
-const login = async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password });
-    const { access_token, refresh_token, user } = response.data;
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('refresh_token', refresh_token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setUser(user);
-    window.location.href = '/profile';  // Перенаправление на ЛК
-};
-//<Route path="/reviews" element={<ReviewsPage />} />
-
 function AppRoutes() {
     return (
         <Routes>
@@ -50,7 +39,8 @@ function AppRoutes() {
             <Route path="/ege" element={<EGEPage />} />
             <Route path="/trial-oge" element={<TrialOGEPage />} />
             <Route path="/trial-ege" element={<TrialEGEPage />} />
-            <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+            <Route path="/reviews" element={<ReviewsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/topics" element={<PrivateRoute><TopicsPage /></PrivateRoute>} />
             <Route path="/topic/:id/tasks" element={<PrivateRoute><TasksPage /></PrivateRoute>} />
             <Route path="/topic/:id/theory" element={<PrivateRoute><TheoryPage /></PrivateRoute>} />

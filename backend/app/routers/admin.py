@@ -33,21 +33,42 @@ def get_users(
     total = query.count()
     users = query.offset(offset).limit(limit).all()
 
+    result_items = []
+    for u in users:
+        user_data = {
+            "id": u.id,
+            "email": u.email,
+            "full_name": u.full_name,
+            "class_name": u.class_name,
+            "role": u.role,
+            "xp": u.xp,
+            "level": u.level,
+            "created_at": u.created_at
+        }
+
+        if u.role == "student":
+            total_tasks = db.query(models.TaskAttempt.task_id).filter(
+                models.TaskAttempt.user_id == u.id
+            ).distinct().count()
+
+            correct_tasks = db.query(models.TaskAttempt.task_id).filter(
+                models.TaskAttempt.user_id == u.id,
+                models.TaskAttempt.is_correct == True
+            ).distinct().count()
+
+            correct_percent = round((correct_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0
+
+            user_data["total_tasks"] = total_tasks
+            user_data["correct_percent"] = correct_percent
+        else:
+            user_data["total_tasks"] = 0
+            user_data["correct_percent"] = 0
+
+        result_items.append(user_data)
+
     return {
         "total": total,
-        "items": [
-            {
-                "id": u.id,
-                "email": u.email,
-                "full_name": u.full_name,
-                "class_name": u.class_name,
-                "role": u.role,
-                "xp": u.xp,
-                "level": u.level,
-                "created_at": u.created_at
-            }
-            for u in users
-        ]
+        "items": result_items
     }
 
 

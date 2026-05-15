@@ -125,7 +125,6 @@ def submit_attempt(
             explanation = task.solution_explanation or f"Неверно. Правильный ответ: {task.correct_answer}"
 
     elif task.type == 'equation':
-        # Здесь будет проверка через SymPy
         if user_answer.strip() == task.correct_answer.strip():
             is_correct = True
             explanation = "Уравнение решено верно!"

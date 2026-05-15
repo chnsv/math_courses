@@ -16,7 +16,7 @@ const LoginPage: React.FC = () => {
         setLoading(true);
         try {
             await login(email, password);
-            navigate('/topics');
+            navigate('/profile');
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Ошибка входа');
         } finally {
