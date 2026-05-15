@@ -1,3 +1,4 @@
+import { MathJaxContext } from 'better-react-mathjax';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Header from './components/Header';
@@ -20,6 +21,20 @@ import StudentCoursePage from './pages/StudentCoursePage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import StudentTestPage from './pages/StudentTestPage';
+
+const mathJaxConfig = {
+    loader: { load: ['input/tex', 'output/chtml'] },
+    tex: {
+        packages: ['base', 'ams', 'newcommand', 'cancel', 'boldsymbol'],
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+    },
+    chtml: {
+        scale: 1,
+        minScale: 0.5,
+        matchFontHeight: true
+    }
+};
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, loading } = useAuth();
@@ -56,12 +71,14 @@ function AppRoutes() {
 
 function App() {
     return (
-        <BrowserRouter>
-            <AuthProvider>
-                <Header />
-                <AppRoutes />
-            </AuthProvider>
-        </BrowserRouter>
+        <MathJaxContext config={mathJaxConfig}>
+            <BrowserRouter>
+                <AuthProvider>
+                    <Header />
+                    <AppRoutes />
+                </AuthProvider>
+            </BrowserRouter>
+        </MathJaxContext>
     );
 }
 

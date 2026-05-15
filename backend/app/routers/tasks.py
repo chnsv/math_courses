@@ -10,9 +10,14 @@ router = APIRouter()
 XP_REWARDS = {
     'test': 10,
     'numeric': 20,
-    'equation': 30
+    'equation': 30,
+    'text': 25,
+    'integral': 40,
+    'derivative': 35,
+    'system': 35,
+    'inequality': 30,
+    'geometry': 30
 }
-
 
 @router.get("/")
 def get_tasks(
@@ -97,7 +102,7 @@ def submit_attempt(
             "solution_explanation": "Вы уже решили эту задачу ранее!"
         }
 
-    user_answer = attempt_data.get("user_answer", "")
+    user_answer = attempt_data.get("user_answer", "").strip()
     is_correct = False
     explanation = ""
 
@@ -109,30 +114,115 @@ def submit_attempt(
 
         if correct_option:
             is_correct = (user_answer == str(correct_option.id))
-        explanation = task.solution_explanation or "Правильный ответ: " + task.correct_answer
+        explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
 
     elif task.type == 'numeric':
         try:
             user_val = float(user_answer.replace(',', '.'))
             correct_val = float(task.correct_answer.replace(',', '.'))
             is_correct = abs(user_val - correct_val) < 0.01
+            if is_correct:
+                explanation = "Верный ответ!"
+            else:
+                explanation = task.solution_explanation or f"Неверно. Правильный ответ: {task.correct_answer}"
         except ValueError:
             is_correct = False
+            explanation = "Неверный формат ответа. Введите число."
 
+    elif task.type == 'equation':
+        try:
+            from sympy import symbols, Eq, solve, sympify, simplify
+
+            import re
+            question_text = task.question_text
+            variables = re.findall(r'([a-zA-Z])', question_text)
+            var_name = next((v for v in variables if v not in ['cos', 'sin', 'tan', 'log', 'sqrt']), 'x')
+            x = symbols(var_name)
+
+            if '=' in question_text:
+                left_str, right_str = question_text.split('=')
+            else:
+                left_str, right_str = question_text, '0'
+
+            try:
+                left_expr = sympify(left_str.strip())
+                right_expr = sympify(right_str.strip())
+                equation = Eq(left_expr, right_expr)
+                correct_solutions = solve(equation, x)
+            except Exception:
+                correct_solutions = [task.correct_answer]
+
+            user_answer_clean = user_answer.replace(' ', '')
+            if '=' in user_answer_clean:
+                _, user_val_part = user_answer_clean.split('=')
+                try:
+                    user_value = sympify(user_val_part)
+                except Exception:
+                    user_value = user_answer_clean
+            else:
+                try:
+                    user_value = sympify(user_answer_clean)
+                except Exception:
+                    user_value = user_answer_clean
+
+            if correct_solutions and len(correct_solutions) > 0:
+                try:
+                    correct_val = correct_solutions[0]
+                    if isinstance(correct_val, (int, float)):
+                        user_num = float(user_value) if hasattr(user_value, 'evalf') else float(user_value)
+                        correct_num = float(correct_val)
+                        is_correct = abs(user_num - correct_num) < 0.01
+                    else:
+                        is_correct = simplify(user_value - correct_val) == 0
+                except Exception:
+                    is_correct = user_answer_clean == str(correct_solutions[0])
+            else:
+                is_correct = user_answer_clean == task.correct_answer
+
+            if is_correct:
+                explanation = "Уравнение решено верно!"
+            else:
+                explanation = task.solution_explanation or f"Неверно. Правильный ответ: {correct_solutions[0] if correct_solutions else task.correct_answer}"
+        except Exception as e:
+            print(f"SymPy ошибка: {e}")
+            is_correct = user_answer == task.correct_answer
+            explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
+
+    elif task.type == 'text':
+        # Текстовая задача — проверка по ключевым словам или частичное совпадение
+        user_lower = user_answer.lower()
+        correct_lower = task.correct_answer.lower()
+        is_correct = user_lower == correct_lower or correct_lower in user_lower
         if is_correct:
             explanation = "Верный ответ!"
         else:
-            explanation = task.solution_explanation or f"Неверно. Правильный ответ: {task.correct_answer}"
+            explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
 
-    elif task.type == 'equation':
-        if user_answer.strip() == task.correct_answer.strip():
-            is_correct = True
-            explanation = "Уравнение решено верно!"
-        else:
-            is_correct = False
-            explanation = task.solution_explanation or f"Неверно. Правильное решение: {task.correct_answer}"
+    elif task.type == 'integral':
+        try:
+            from sympy import Integral, symbols, simplify
+            is_correct = user_answer == task.correct_answer
+            explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
+        except Exception:
+            is_correct = user_answer == task.correct_answer
+            explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
+
+    elif task.type == 'derivative':
+        try:
+            from sympy import diff, symbols, simplify
+            is_correct = user_answer == task.correct_answer
+            explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
+        except Exception:
+            is_correct = user_answer == task.correct_answer
+            explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
+
+    elif task.type in ['system', 'inequality', 'geometry']:
+        is_correct = user_answer == task.correct_answer
+        explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
+
     else:
-        is_correct = False
+        is_correct = user_answer == task.correct_answer
+        explanation = task.solution_explanation or f"Правильный ответ: {task.correct_answer}"
 
     earned_xp = XP_REWARDS.get(task.type, 10) if is_correct else 0
     score = 100 if is_correct else 0
@@ -162,7 +252,6 @@ def submit_attempt(
         "earned_xp": earned_xp,
         "solution_explanation": explanation
     }
-
 
 @router.delete("/{task_id}")
 def delete_task(

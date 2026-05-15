@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { MathJax } from 'better-react-mathjax';
 
 interface Course {
     id: number;
@@ -50,25 +51,22 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
     const [newTheory, setNewTheory] = useState({ title: '', content: '' });
     const [showAddTaskModal, setShowAddTaskModal] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
-    const [newTask, setNewTask] = useState({ type: 'equation', question_text: '', correct_answer: '', difficulty: 1, parameters: null });
+    const [newTask, setNewTask] = useState({ type: 'equation', question_text: '', correct_answer: '', difficulty: 1, parameters: null, theory_block_id: null });
     const [tests, setTests] = useState<any[]>([]);
     const [showAddTestModal, setShowAddTestModal] = useState(false);
-    const [newTest, setNewTest] = useState({ title: '', description: '', duration_minutes: 45, selectedTasks: [] });
-    const [students, setStudents] = useState<any[]>([]);
+    const [newTest, setNewTest] = useState({ title: '', description: '', duration_minutes: 45, selectedTheoryBlocks: [] });
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [selectedTestForAssign, setSelectedTestForAssign] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [courseStudents, setCourseStudents] = useState<any[]>([]);
-    const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
     const [courseStudentsList, setCourseStudentsList] = useState<any[]>([]);
-
+    const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
     const [studentsStats, setStudentsStats] = useState<any[]>([]);
     const [loadingStats, setLoadingStats] = useState(false);
 
     useEffect(() => {
         loadTopics();
         loadTests();
-        loadStudents();
+        loadCourseStudentsList();
         loadStudentsStats();
     }, []);
 
@@ -91,7 +89,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         }
     };
 
-    const loadStudents = async () => {
+    const loadCourseStudentsList = async () => {
         try {
             const response = await api.get(`/courses/${course.id}/students`);
             console.log('Ученики курса:', response.data);
@@ -116,25 +114,6 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
             setTasks(response.data);
         } catch (error) {
             console.error('Ошибка загрузки задач:', error);
-        }
-    };
-
-    const loadCourseStudents = async () => {
-        try {
-            const response = await api.get(`/admin/users?role=student&course_id=${course.id}`);
-            setCourseStudents(response.data.items || []);
-        } catch (error) {
-            console.error('Ошибка загрузки учеников курса:', error);
-        }
-    };
-
-    const loadCourseStudentsList = async () => {
-        try {
-            const response = await api.get(`/courses/${course.id}/students`);
-            console.log('Ученики курса:', response.data);
-            setCourseStudentsList(response.data);
-        } catch (error) {
-            console.error('Ошибка загрузки учеников курса:', error);
         }
     };
 
@@ -394,7 +373,6 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         }
     };
 
-
     const deleteTest = async (testId: number) => {
         if (confirm('Удалить тест?')) {
             setLoading(true);
@@ -410,34 +388,22 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         }
     };
 
-    const assignTest = async () => {
-        if (!selectedTestForAssign) return;
-        setLoading(true);
-        try {
-            await api.post(`/teacher/tests/${selectedTestForAssign.id}/assign`, {
-                student_ids: newTest.selectedTasks
-            });
-            setShowAssignModal(false);
-            setSelectedTestForAssign(null);
-            setNewTest({ ...newTest, selectedTasks: [] });
-            alert('Тест назначен ученикам');
-        } catch (error) {
-            alert('Ошибка назначения');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     if (loading) {
         return <div style={{ textAlign: 'center', padding: '50px' }}>Загрузка...</div>;
     }
+
+    // Функция для отображения  с  MathJax
+    const renderMathContent = (content: string) => {
+        if (!content) return '';
+        return <MathJax>{content}</MathJax>;
+    };
 
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 2000, overflow: 'auto', padding: '40px' }}>
             <div style={{ maxWidth: '1200px', margin: '0 auto', backgroundColor: 'white', borderRadius: '16px', padding: '30px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h2>Управление курсом: {course.title}</h2>
-                    <button onClick={onClose} style={{ fontSize: '24px', cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+                    <button onClick={onClose} style={{ fontSize: '24px', cursor: 'pointer', background: 'none', border: 'none', color: '#333' }}>✕</button>
                 </div>
                 <p style={{ marginBottom: '20px', color: '#666' }}>{course.description}</p>
 
@@ -502,7 +468,9 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                                                 <button onClick={() => deleteTheoryBlock(block.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🗑️</button>
                                             </div>
                                         </div>
-                                        <div dangerouslySetInnerHTML={{ __html: block.content.substring(0, 200) + (block.content.length > 200 ? '...' : '') }} />
+                                        <div style={{ fontSize: '14px', lineHeight: '1.6', marginTop: '10px' }}>
+                                            <MathJax>{block.content}</MathJax>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -510,6 +478,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                     </div>
                 )}
 
+                {/* Задачи */}
                 {activeSubtab === 'tasks' && selectedTopic && (
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -529,25 +498,42 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                             <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Нет задач. Добавьте первую задачу</p>
                         ) : (
                             <div style={{ display: 'grid', gap: '15px' }}>
-                                {tasks.map(task => (
-                                    <div key={task.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '15px', backgroundColor: '#fff' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ marginBottom: '10px' }}>
-                                                    <span style={{ display: 'inline-block', padding: '2px 8px', backgroundColor: task.type === 'equation' ? '#667eea' : task.type === 'numeric' ? '#4CAF50' : '#ff9800', color: 'white', borderRadius: '20px', fontSize: '12px' }}>
-                                                        {task.type === 'equation' ? 'Уравнение' : task.type === 'numeric' ? 'Числовая задача' : 'Тест'}
-                                                    </span>
+                                {tasks.map(task => {
+                                    let typeLabel = '';
+                                    let typeColor = '';
+                                    switch (task.type) {
+                                        case 'equation': typeLabel = 'Уравнение'; typeColor = '#667eea'; break;
+                                        case 'numeric': typeLabel = 'Числовая задача'; typeColor = '#4CAF50'; break;
+                                        case 'text': typeLabel = 'Текстовая задача'; typeColor = '#ff9800'; break;
+                                        case 'integral': typeLabel = 'Интеграл'; typeColor = '#9c27b0'; break;
+                                        case 'derivative': typeLabel = 'Производная'; typeColor = '#3f51b5'; break;
+                                        case 'system': typeLabel = 'Система уравнений'; typeColor = '#009688'; break;
+                                        case 'inequality': typeLabel = 'Неравенство'; typeColor = '#ff5722'; break;
+                                        case 'geometry': typeLabel = 'Геометрия'; typeColor = '#795548'; break;
+                                        default: typeLabel = 'Задача'; typeColor = '#999';
+                                    }
+                                    return (
+                                        <div key={task.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '15px', backgroundColor: '#fff' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ marginBottom: '10px' }}>
+                                                        <span style={{ display: 'inline-block', padding: '2px 12px', backgroundColor: typeColor, color: 'white', borderRadius: '20px', fontSize: '12px' }}>
+                                                            {typeLabel}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ fontSize: '16px', marginBottom: '10px', lineHeight: 1.5 }}>
+                                                        <MathJax>{task.question_text}</MathJax>
+                                                    </div>
+                                                    <div style={{ fontSize: '14px', color: '#666' }}>Ответ: {task.correct_answer}</div>
                                                 </div>
-                                                <div style={{ fontSize: '16px', marginBottom: '10px', lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: task.question_text }} />
-                                                <div style={{ fontSize: '14px', color: '#666' }}>Ответ: {task.correct_answer}</div>
-                                            </div>
-                                            <div>
-                                                <button onClick={() => { setEditingTask(task); }} style={{ backgroundColor: '#ff9800', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '5px', cursor: 'pointer' }}>✏️</button>
-                                                <button onClick={() => deleteTask(task.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🗑️</button>
+                                                <div>
+                                                    <button onClick={() => { setEditingTask(task); }} style={{ backgroundColor: '#ff9800', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '5px', cursor: 'pointer' }}>✏️</button>
+                                                    <button onClick={() => deleteTask(task.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🗑️</button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -581,7 +567,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                                                     loadCourseStudentsList();
                                                     setShowAssignModal(true);
                                                 }} style={{ backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', marginRight: '5px', cursor: 'pointer' }}>
-                                                    Назначить
+                                                    📋 Назначить
                                                 </button>
                                                 <button onClick={() => deleteTest(test.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}>🗑️ Удалить</button>
                                             </div>
@@ -627,7 +613,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px' }}>
                             <h3>Добавить теорию</h3>
                             <input type="text" placeholder="Заголовок" value={newTheory.title} onChange={(e) => setNewTheory({ ...newTheory, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <textarea placeholder="Содержание" value={newTheory.content} onChange={(e) => setNewTheory({ ...newTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <textarea placeholder="Содержание (поддерживается LaTeX: $$...$$)" value={newTheory.content} onChange={(e) => setNewTheory({ ...newTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setShowAddTheoryModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                                 <button onClick={addTheoryBlock} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Добавить</button>
@@ -641,7 +627,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px' }}>
                             <h3>Редактировать теорию</h3>
                             <input type="text" placeholder="Заголовок" value={editingTheory.title} onChange={(e) => setEditingTheory({ ...editingTheory, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <textarea placeholder="Содержание" value={editingTheory.content} onChange={(e) => setEditingTheory({ ...editingTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <textarea placeholder="Содержание (поддерживается LaTeX: $$...$$)" value={editingTheory.content} onChange={(e) => setEditingTheory({ ...editingTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setEditingTheory(null)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                                 <button onClick={updateTheoryBlock} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Сохранить</button>
@@ -656,15 +642,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px', maxWidth: '90%' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                 <h3>Добавить задачу</h3>
-                                <button onClick={() => {
-                                    if (!selectedTopic) {
-                                        alert('Сначала выберите тему');
-                                        return;
-                                    }
-                                    setShowAddTaskModal(true);
-                                }} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                                    + Добавить задачу
-                                </button>
+                                <button onClick={() => setShowAddTaskModal(false)} style={{ fontSize: '24px', cursor: 'pointer', background: 'none', border: 'none', color: '#333' }}>✕</button>
                             </div>
 
                             {/* Выбор подтемы (блока теории) */}
@@ -679,17 +657,44 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                                 ))}
                             </select>
 
-                            <select value={newTask.type} onChange={(e) => setNewTask({ ...newTask, type: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}>
+                            <select
+                                value={newTask.type}
+                                onChange={(e) => setNewTask({ ...newTask, type: e.target.value })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            >
                                 <option value="equation">Уравнение</option>
                                 <option value="numeric">Числовая задача</option>
-                                <option value="test">Тест</option>
+                                <option value="text">Текстовая задача</option>
+                                <option value="integral">Интеграл</option>
+                                <option value="derivative">Производная</option>
+                                <option value="system">Система уравнений</option>
+                                <option value="inequality">Неравенство</option>
+                                <option value="geometry">Геометрическая задача</option>
                             </select>
 
-                            <textarea placeholder="Текст задачи" value={newTask.question_text} onChange={(e) => setNewTask({ ...newTask, question_text: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <textarea
+                                placeholder="Текст задачи (поддерживается LaTeX: $$...$$)"
+                                value={newTask.question_text}
+                                onChange={(e) => setNewTask({ ...newTask, question_text: e.target.value })}
+                                rows={3}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
 
-                            <input type="text" placeholder="Правильный ответ" value={newTask.correct_answer} onChange={(e) => setNewTask({ ...newTask, correct_answer: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <input
+                                type="text"
+                                placeholder="Правильный ответ"
+                                value={newTask.correct_answer}
+                                onChange={(e) => setNewTask({ ...newTask, correct_answer: e.target.value })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
 
-                            <input type="number" placeholder="Сложность (1-5)" value={newTask.difficulty} onChange={(e) => setNewTask({ ...newTask, difficulty: parseInt(e.target.value) })} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <input
+                                type="number"
+                                placeholder="Сложность (1-5)"
+                                value={newTask.difficulty}
+                                onChange={(e) => setNewTask({ ...newTask, difficulty: parseInt(e.target.value) })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
 
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setShowAddTaskModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
@@ -699,12 +704,13 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                     </div>
                 )}
 
+                {/* Модальное окно назначения теста */}
                 {showAssignModal && selectedTestForAssign && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
                         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px', maxWidth: '90%', maxHeight: '80vh', overflow: 'auto' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                 <h3>Назначить тест "{selectedTestForAssign.title}" ученикам</h3>
-                                <button onClick={() => { setShowAssignModal(false); setSelectedTestForAssign(null); setSelectedStudents([]); }} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+                                <button onClick={() => { setShowAssignModal(false); setSelectedTestForAssign(null); setSelectedStudents([]); }} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>✕</button>
                             </div>
 
                             <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }}>
@@ -744,7 +750,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px', maxWidth: '90%', maxHeight: '80vh', overflow: 'auto' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                 <h3>Создать контрольную работу</h3>
-                                <button onClick={() => setShowAddTestModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+                                <button onClick={() => setShowAddTestModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>✕</button>
                             </div>
 
                             <input type="text" placeholder="Название" value={newTest.title} onChange={(e) => setNewTest({ ...newTest, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
