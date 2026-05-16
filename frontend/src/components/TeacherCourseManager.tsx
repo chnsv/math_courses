@@ -62,6 +62,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
     const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
     const [studentsStats, setStudentsStats] = useState<any[]>([]);
     const [loadingStats, setLoadingStats] = useState(false);
+    const [showEditTaskModal, setShowEditTaskModal] = useState(false);
 
     useEffect(() => {
         loadTopics();
@@ -69,6 +70,12 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         loadCourseStudentsList();
         loadStudentsStats();
     }, []);
+
+    const decodeHtmlEntities = (text: string) => {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = text;
+        return textarea.value;
+    };
 
     const loadTopics = async () => {
         try {
@@ -321,6 +328,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         try {
             const taskData = {
                 topic_id: selectedTopic.id,
+                theory_block_id: newTask.theory_block_id,
                 type: newTask.type,
                 question_text: newTask.question_text,
                 correct_answer: newTask.correct_answer,
@@ -392,7 +400,6 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         return <div style={{ textAlign: 'center', padding: '50px' }}>Загрузка...</div>;
     }
 
-    // Функция для отображения  с  MathJax
     const renderMathContent = (content: string) => {
         if (!content) return '';
         return <MathJax>{content}</MathJax>;
@@ -527,7 +534,7 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                                                     <div style={{ fontSize: '14px', color: '#666' }}>Ответ: {task.correct_answer}</div>
                                                 </div>
                                                 <div>
-                                                    <button onClick={() => { setEditingTask(task); }} style={{ backgroundColor: '#ff9800', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '5px', cursor: 'pointer' }}>✏️</button>
+                                                    <button onClick={() => { setEditingTask(task); setShowEditTaskModal(true); }} style={{ backgroundColor: '#ff9800', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '5px', cursor: 'pointer' }}>✏️</button>
                                                     <button onClick={() => deleteTask(task.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🗑️</button>
                                                 </div>
                                             </div>
@@ -624,10 +631,25 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
 
                 {editingTheory && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
-                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px' }}>
-                            <h3>Редактировать теорию</h3>
-                            <input type="text" placeholder="Заголовок" value={editingTheory.title} onChange={(e) => setEditingTheory({ ...editingTheory, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
-                            <textarea placeholder="Содержание (поддерживается LaTeX: $$...$$)" value={editingTheory.content} onChange={(e) => setEditingTheory({ ...editingTheory, content: e.target.value })} rows={6} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '600px', maxWidth: '90%' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h3>Редактировать теорию</h3>
+                                <button onClick={() => setEditingTheory(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#333' }}>✕</button>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Заголовок"
+                                value={editingTheory.title}
+                                onChange={(e) => setEditingTheory({ ...editingTheory, title: e.target.value })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
+                            <textarea
+                                placeholder="Содержание (поддерживается LaTeX: $$...$$)"
+                                value={editingTheory.content}
+                                onChange={(e) => setEditingTheory({ ...editingTheory, content: e.target.value })}
+                                rows={12}
+                                style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px', fontFamily: 'monospace', fontSize: '14px' }}
+                            />
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setEditingTheory(null)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                                 <button onClick={updateTheoryBlock} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Сохранить</button>
@@ -699,6 +721,61 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setShowAddTaskModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
                                 <button onClick={addTask} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Добавить</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {showEditTaskModal && editingTask && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
+                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', width: '500px', maxWidth: '90%' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h3>Редактировать задачу</h3>
+                                <button onClick={() => setShowEditTaskModal(false)} style={{ fontSize: '24px', cursor: 'pointer', background: 'none', border: 'none', color: '#333' }}>✕</button>
+                            </div>
+
+                            <select
+                                value={editingTask.type}
+                                onChange={(e) => setEditingTask({ ...editingTask, type: e.target.value })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            >
+                                <option value="equation">Уравнение</option>
+                                <option value="numeric">Числовая задача</option>
+                                <option value="text">Текстовая задача</option>
+                                <option value="integral">Интеграл</option>
+                                <option value="derivative">Производная</option>
+                                <option value="system">Система уравнений</option>
+                                <option value="inequality">Неравенство</option>
+                                <option value="geometry">Геометрическая задача</option>
+                            </select>
+
+                            <textarea
+                                placeholder="Текст задачи (поддерживается LaTeX: $$...$$)"
+                                value={editingTask.question_text}
+                                onChange={(e) => setEditingTask({ ...editingTask, question_text: e.target.value })}
+                                rows={4}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
+
+                            <input
+                                type="text"
+                                placeholder="Правильный ответ"
+                                value={editingTask.correct_answer}
+                                onChange={(e) => setEditingTask({ ...editingTask, correct_answer: e.target.value })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
+
+                            <input
+                                type="number"
+                                placeholder="Сложность (1-5)"
+                                value={editingTask.difficulty}
+                                onChange={(e) => setEditingTask({ ...editingTask, difficulty: parseInt(e.target.value) })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
+
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setShowEditTaskModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
+                                <button onClick={updateTask} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Сохранить</button>
                             </div>
                         </div>
                     </div>

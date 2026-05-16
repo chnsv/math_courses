@@ -738,38 +738,46 @@ def submit_test(
 
     answers = submit_data.get("answers", {})
 
-    print(f"=== ПРОВЕРКА ТЕСТА ===")
-    print(f"Ответы ученика: {answers}")
-
-    import json
-    generated_params_list = json.loads(assignment.generated_params) if assignment.generated_params else []
-
-    test_questions = db.query(
-        models.TestQuestion,
-        models.QuestionTemplate
-    ).join(
-        models.QuestionTemplate,
-        models.TestQuestion.template_id == models.QuestionTemplate.id
-    ).filter(
+    test_questions = db.query(models.TestQuestion).filter(
         models.TestQuestion.test_id == test_id
     ).order_by(models.TestQuestion.order_index).all()
 
     score = 0
 
-    for idx, (tq, template) in enumerate(test_questions):
-        user_answer = answers.get(str(tq.id), "").strip()
+    for tq in test_questions:
+        template = db.query(models.QuestionTemplate).filter(
+            models.QuestionTemplate.id == tq.template_id
+        ).first()
 
-        correct_answer = None
-        if idx < len(generated_params_list):
-            correct_answer = generated_params_list[idx].get("correct_answer")
-        else:
+        if template:
+            user_answer = answers.get(str(tq.id), "")
+
             try:
                 if template.answer_template:
-                    correct_answer = str(eval(template.answer_template))
-            except:
-                correct_answer = template.answer_template
+                    import json
+                    params_list = json.loads(assignment.generated_params) if assignment.generated_params else []
 
-        print(f"Вопрос {tq.id}: ответ ученика='{user_answer}', правильный='{correct_answer}'")
+                    correct_answer = None
+                    for params in params_list:
+                        if params.get("test_question_id") == tq.id:
+                            correct_answer = params.get("correct_answer")
+                            break
+
+                    if correct_answer is None:
+                        correct_answer = template.answer_template
+                else:
+                    correct_answer = template.template_text
+            except Exception as e:
+                print(f"Ошибка вычисления: {e}")
+                correct_answer = ""
+
+            print(f"Вопрос {tq.id}: ответ='{user_answer}', правильный='{correct_answer}'")
+
+            if str(user_answer).strip() == str(correct_answer).strip():
+                score += 1
+                print("ВЕРНО")
+            else:
+                print("НЕВЕРНО")
 
     print(f"ИТОГО: {score} из {len(test_questions)}")
 
@@ -783,6 +791,7 @@ def submit_test(
         "total": len(test_questions),
         "percentage": (score / len(test_questions) * 100) if len(test_questions) > 0 else 0
     }
+
 @router.get("/my-students")
 def get_my_students(
         db: Session = Depends(get_db),

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { tasksApi } from '../services/api';
+import { useParams, useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { MathJax } from 'better-react-mathjax';
 
 interface Task {
     id: number;
     type: string;
     question_text: string;
     difficulty: number;
+    theory_block_id?: number;
     options?: { id: number; text: string }[];
 }
 
@@ -18,7 +20,8 @@ interface AttemptResult {
 }
 
 const TasksPage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id, theoryBlockId } = useParams<{ id: string; theoryBlockId: string }>();
+    const navigate = useNavigate();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answer, setAnswer] = useState('');
@@ -28,12 +31,19 @@ const TasksPage: React.FC = () => {
 
     useEffect(() => {
         fetchTasks();
-    }, [id]);
+    }, [id, theoryBlockId]);
 
     const fetchTasks = async () => {
         try {
-            const response = await tasksApi.getTasks(Number(id));
-            setTasks(response.data);
+            const response = await api.get(`/tasks?topic_id=${id}`);
+            let filteredTasks = response.data;
+
+            if (theoryBlockId) {
+                const blockId = parseInt(theoryBlockId);
+                filteredTasks = response.data.filter((task: Task) => task.theory_block_id === blockId);
+            }
+
+            setTasks(filteredTasks);
         } catch (error) {
             console.error('Ошибка загрузки задач:', error);
             alert('Не удалось загрузить задачи');
@@ -52,7 +62,9 @@ const TasksPage: React.FC = () => {
         const currentTask = tasks[currentIndex];
 
         try {
-            const response = await tasksApi.submitAttempt(currentTask.id, answer);
+            const response = await api.post(`/tasks/${currentTask.id}/attempt`, {
+                user_answer: answer
+            });
             setResult(response.data);
         } catch (error: any) {
             console.error('Ошибка при проверке:', error);
@@ -77,6 +89,15 @@ const TasksPage: React.FC = () => {
         setAnswer('');
     };
 
+    const getTypeLabel = (type: string) => {
+        switch (type) {
+            case 'test': return 'Тест';
+            case 'numeric': return 'Числовая задача';
+            case 'equation': return 'Уравнение';
+            default: return 'Задача';
+        }
+    };
+
     if (loading) {
         return <div style={{ textAlign: 'center', padding: 50 }}>Загрузка задач...</div>;
     }
@@ -85,7 +106,7 @@ const TasksPage: React.FC = () => {
         return (
             <div style={{ textAlign: 'center', padding: 50 }}>
                 <h2>Нет задач в этой теме</h2>
-                <Link to="/topics">← Вернуться к темам</Link>
+                <button onClick={() => navigate(-1)} style={{ marginTop: 20, cursor: 'pointer' }}>← Вернуться назад</button>
             </div>
         );
     }
@@ -95,13 +116,13 @@ const TasksPage: React.FC = () => {
 
     return (
         <div style={{ maxWidth: 800, margin: '0 auto', padding: 20 }}>
-            {/* Верхняя панель */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <Link to="/topics" style={{ textDecoration: 'none' }}>← Назад к темам</Link>
+                <button onClick={() => navigate(-1)} style={{ cursor: 'pointer' }}>
+                    ← Назад к теории
+                </button>
                 <div>Задача {currentIndex + 1} из {tasks.length}</div>
             </div>
 
-            {/* Прогресс */}
             <div style={{ marginBottom: 20 }}>
                 <div style={{
                     width: '100%',
@@ -113,14 +134,13 @@ const TasksPage: React.FC = () => {
                     <div style={{
                         width: `${progress}%`,
                         height: '100%',
-                        backgroundColor: '#007bff',
+                        backgroundColor: '#4CAF50',
                         transition: 'width 0.3s'
                     }} />
                 </div>
                 <div style={{ marginTop: 5, fontSize: 14, color: '#666' }}>Прогресс: {progress}%</div>
             </div>
 
-            {/* Карточка задачи */}
             <div style={{
                 backgroundColor: '#fff',
                 borderRadius: 12,
@@ -138,56 +158,32 @@ const TasksPage: React.FC = () => {
                         fontSize: 12,
                         marginBottom: 10
                     }}>
-                        {currentTask.type === 'test' ? 'Тест' :
-                         currentTask.type === 'numeric' ? 'Числовая задача' :
-                         'Уравнение'}
+                        {getTypeLabel(currentTask.type)}
                         {currentTask.difficulty && ` • Сложность: ${currentTask.difficulty}`}
                     </span>
                 </div>
 
-                {/* Вопрос с поддержкой LaTeX */}
-                <div style={{ fontSize: 18, marginBottom: 24, lineHeight: 1.6 }}>
-                    <div dangerouslySetInnerHTML={{ __html: currentTask.question_text }} />
+                <div style={{ fontSize: 18, marginBottom: 24, lineHeight: 1.5 }}>
+                    <MathJax>{currentTask.question_text}</MathJax>
                 </div>
 
-                {/* Поле ввода ответа */}
-                {currentTask.type === 'test' && currentTask.options ? (
-                    <div style={{ marginBottom: 20 }}>
-                        {currentTask.options.map(opt => (
-                            <label key={opt.id} style={{ display: 'block', marginBottom: 10, cursor: 'pointer' }}>
-                                <input
-                                    type="radio"
-                                    name="answer"
-                                    value={opt.id}
-                                    onChange={(e) => setAnswer(e.target.value)}
-                                    checked={answer === String(opt.id)}
-                                />
-                                <span style={{ marginLeft: 8 }}>
-                                    <span dangerouslySetInnerHTML={{ __html: opt.text }} />
-                                </span>
-                            </label>
-                        ))}
-                    </div>
-                ) : (
-                    <div style={{ marginBottom: 20 }}>
-                        <input
-                            type="text"
-                            value={answer}
-                            onChange={(e) => setAnswer(e.target.value)}
-                            placeholder="Введите ваш ответ"
-                            style={{
-                                width: '100%',
-                                padding: 12,
-                                fontSize: 16,
-                                border: '1px solid #ddd',
-                                borderRadius: 8,
-                            }}
-                            disabled={!!result}
-                        />
-                    </div>
-                )}
+                <div style={{ marginBottom: 20 }}>
+                    <input
+                        type="text"
+                        value={answer}
+                        onChange={(e) => setAnswer(e.target.value)}
+                        placeholder="Введите ваш ответ"
+                        style={{
+                            width: '100%',
+                            padding: 12,
+                            fontSize: 16,
+                            border: '1px solid #ddd',
+                            borderRadius: 8,
+                        }}
+                        disabled={!!result}
+                    />
+                </div>
 
-                {/* Кнопка проверки */}
                 {!result && (
                     <button
                         onClick={handleSubmit}
@@ -195,7 +191,7 @@ const TasksPage: React.FC = () => {
                         style={{
                             width: '100%',
                             padding: 12,
-                            backgroundColor: '#007bff',
+                            backgroundColor: '#2196F3',
                             color: 'white',
                             border: 'none',
                             borderRadius: 8,
@@ -207,7 +203,6 @@ const TasksPage: React.FC = () => {
                     </button>
                 )}
 
-                {/* Результат проверки */}
                 {result && (
                     <div style={{
                         marginTop: 20,
@@ -217,7 +212,7 @@ const TasksPage: React.FC = () => {
                         border: `1px solid ${result.is_correct ? '#c3e6cb' : '#f5c6cb'}`,
                     }}>
                         <div style={{ fontSize: 18, marginBottom: 10 }}>
-                            {result.is_correct ? 'Правильно!' : 'Неправильно'}
+                            {result.is_correct ? '✓ Правильно!' : '✗ Неправильно'}
                         </div>
                         {result.earned_xp > 0 && (
                             <div style={{ marginBottom: 10, color: '#28a745' }}>
@@ -247,7 +242,7 @@ const TasksPage: React.FC = () => {
                                 onClick={handleNext}
                                 style={{
                                     padding: '8px 16px',
-                                    backgroundColor: '#007bff',
+                                    backgroundColor: '#4CAF50',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: 5,

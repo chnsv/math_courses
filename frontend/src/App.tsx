@@ -25,14 +25,8 @@ import StudentTestPage from './pages/StudentTestPage';
 const mathJaxConfig = {
     loader: { load: ['input/tex', 'output/chtml'] },
     tex: {
-        packages: ['base', 'ams', 'newcommand', 'cancel', 'boldsymbol'],
         inlineMath: [['$', '$'], ['\\(', '\\)']],
         displayMath: [['$$', '$$'], ['\\[', '\\]']]
-    },
-    chtml: {
-        scale: 1,
-        minScale: 0.5,
-        matchFontHeight: true
     }
 };
 
@@ -55,16 +49,20 @@ function AppRoutes() {
             <Route path="/trial-oge" element={<TrialOGEPage />} />
             <Route path="/trial-ege" element={<TrialEGEPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/topics" element={<PrivateRoute><TopicsPage /></PrivateRoute>} />
-            <Route path="/topic/:id/tasks" element={<PrivateRoute><TasksPage /></PrivateRoute>} />
-            <Route path="/topic/:id/theory" element={<PrivateRoute><TheoryPage /></PrivateRoute>} />
-            <Route path="/admin/course/:courseId/topic/:topicId" element={<PrivateRoute><TopicManagementPage /></PrivateRoute>} />
-            <Route path="/student/course/:courseId" element={<PrivateRoute><StudentCoursePage /></PrivateRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
-            <Route path="/student/test/:testId/assignment/:assignmentId" element={<PrivateRoute><StudentTestPage /></PrivateRoute>} />
 
+            <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+            <Route path="/topics" element={<PrivateRoute><TopicsPage /></PrivateRoute>} />
+
+            <Route path="/topic/:id/tasks/:theoryBlockId" element={<PrivateRoute><TasksPage /></PrivateRoute>} />
+
+            <Route path="/topic/:id/theory" element={<PrivateRoute><TheoryPage /></PrivateRoute>} />
+
+            <Route path="/admin/course/:courseId/topic/:topicId" element={<PrivateRoute><TopicManagementPage /></PrivateRoute>} />
+
+            <Route path="/student/course/:courseId" element={<PrivateRoute><StudentCoursePage /></PrivateRoute>} />
+            <Route path="/student/test/:testId/assignment/:assignmentId" element={<PrivateRoute><StudentTestPage /></PrivateRoute>} />
         </Routes>
     );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
@@ -7,46 +7,52 @@ interface Topic {
     id: number;
     title: string;
     description: string;
-    children: Topic[];
+    children?: Topic[];
 }
 
 const TopicsPage: React.FC = () => {
     const [topics, setTopics] = useState<Topic[]>([]);
     const [loading, setLoading] = useState(true);
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
     useEffect(() => {
+        const fetchTopics = async () => {
+            try {
+                const response = await api.get('/topics');
+                setTopics(response.data);
+            } catch (error) {
+                console.error('Ошибка:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
         fetchTopics();
     }, []);
 
-    const fetchTopics = async () => {
-        try {
-            const response = await api.get('/topics');
-            setTopics(response.data);
-        } catch (error) {
-            console.error('Ошибка загрузки тем:', error);
-        } finally {
-            setLoading(false);
-        }
+    const handleTopicClick = (topicId: number) => {
+        navigate(`/subtopics/${topicId}`);
     };
 
     const renderTopic = (topic: Topic) => (
-        <div key={topic.id} style={{
+        <div key={topic.id} onClick={() => handleTopicClick(topic.id)} style={{
             border: '1px solid #ddd',
-            borderRadius: 8,
-            padding: 16,
+            borderRadius: 12,
+            padding: 20,
             marginBottom: 16,
-            backgroundColor: '#fff'
+            backgroundColor: '#fff',
+            cursor: 'pointer',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
         }}>
             <h3>{topic.title}</h3>
-            <p>{topic.description}</p>
-            <div>
-                <Link to={`/topic/${topic.id}/theory`} style={{ marginRight: 16 }}>Теория</Link>
-                <Link to={`/topic/${topic.id}/tasks`}>Задачи</Link>
-            </div>
-            {topic.children.length > 0 && (
-                <div style={{ marginTop: 16, marginLeft: 20 }}>
-                    {topic.children.map(child => renderTopic(child))}
+            <p style={{ color: '#666' }}>{topic.description}</p>
+            {topic.children && topic.children.length > 0 && (
+                <div style={{ marginLeft: 20, marginTop: 10 }}>
+                    {topic.children.map(child => (
+                        <div key={child.id} style={{ marginBottom: 8 }}>
+                            📘 {child.title}
+                        </div>
+                    ))}
                 </div>
             )}
         </div>
@@ -56,16 +62,8 @@ const TopicsPage: React.FC = () => {
 
     return (
         <div style={{ maxWidth: 800, margin: '0 auto', padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Курс математики</h1>
-                <div>
-                    <span>Привет, {user?.full_name || user?.email}!</span>
-                    <button onClick={logout} style={{ marginLeft: 16, padding: '5px 10px' }}>Выйти</button>
-                </div>
-            </div>
-            <div style={{ marginTop: 20 }}>
-                {topics.map(topic => renderTopic(topic))}
-            </div>
+            <h1>Темы курса</h1>
+            {topics.map(renderTopic)}
         </div>
     );
 };

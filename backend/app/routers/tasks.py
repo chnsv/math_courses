@@ -38,7 +38,8 @@ def get_tasks(
             "id": task.id,
             "type": task.type,
             "question_text": task.question_text,
-            "difficulty": task.difficulty
+            "difficulty": task.difficulty,
+            "theory_block_id": task.theory_block_id
         }
 
         if task.type == 'test':

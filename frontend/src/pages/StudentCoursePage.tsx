@@ -1,191 +1,266 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { MathJax } from 'better-react-mathjax';
 
 interface Topic {
     id: number;
     title: string;
     description: string;
     progress: number;
-    completed: boolean;
 }
 
 interface TheoryBlock {
     id: number;
     title: string;
     content: string;
-}
-
-interface Task {
-    id: number;
-    type: string;
-    question_text: string;
-    correct_answer: string;
-    difficulty: number;
+    order_index: number;
 }
 
 const StudentCoursePage: React.FC = () => {
     const { courseId } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
-    const [course, setCourse] = useState<any>(null);
     const [topics, setTopics] = useState<Topic[]>([]);
+    const [courseTitle, setCourseTitle] = useState('');
     const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
     const [theoryBlocks, setTheoryBlocks] = useState<TheoryBlock[]>([]);
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [activeTab, setActiveTab] = useState<'topics' | 'theory' | 'tasks'>('topics');
+    const [selectedBlock, setSelectedBlock] = useState<TheoryBlock | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'topics' | 'theory'>('topics');
 
     useEffect(() => {
-        loadCourseData();
+        const fetchData = async () => {
+            try {
+                const [topicsRes, courseRes] = await Promise.all([
+                    api.get(`/courses/${courseId}/topics`),
+                    api.get(`/courses/${courseId}`)
+                ]);
+
+                setTopics(topicsRes.data);
+                setCourseTitle(courseRes.data.title);
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
     }, [courseId]);
 
-    const loadCourseData = async () => {
-        setLoading(true);
-        try {
-            const [courseRes, progressRes] = await Promise.all([
-                api.get(`/courses/${courseId}`),
-                api.get(`/courses/my-courses/${courseId}/progress`)
-            ]);
-            setCourse(courseRes.data);
-            setTopics(progressRes.data);
-        } catch (error) {
-            console.error('Ошибка загрузки курса:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const selectTopic = async (topic: Topic) => {
+    const handleTopicClick = async (topic: Topic) => {
         setSelectedTopic(topic);
+        setActiveTab('theory');
         try {
-            const [theoryRes, tasksRes] = await Promise.all([
-                api.get(`/topics/${topic.id}/theory`),
-                api.get(`/tasks?topic_id=${topic.id}`)
-            ]);
-            setTheoryBlocks(theoryRes.data.blocks || []);
-            setTasks(tasksRes.data);
-            setActiveTab('theory');
+            const response = await api.get(`/topics/${topic.id}/theory`);
+            const blocksData = response.data.blocks || response.data;
+            setTheoryBlocks(blocksData);
         } catch (error) {
-            console.error('Ошибка загрузки темы:', error);
+            console.error('Ошибка загрузки теории:', error);
+            setTheoryBlocks([]);
         }
     };
 
-    const handleTaskAnswer = async (taskId: number, answer: string) => {
-        try {
-            const response = await api.post(`/tasks/${taskId}/attempt`, { user_answer: answer });
-            alert(response.data.is_correct ? 'Правильно! +' + response.data.earned_xp + ' XP' : 'Неправильно. ' + response.data.solution_explanation);
-            loadCourseData();
-        } catch (error) {
-            alert('Ошибка при проверке');
+    const openModal = (block: TheoryBlock) => {
+        setSelectedBlock(block);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setSelectedBlock(null);
+    };
+
+    const goToTasks = () => {
+        closeModal();
+        if (selectedTopic && selectedBlock) {
+            navigate(`/topic/${selectedTopic.id}/tasks/${selectedBlock.id}`);
         }
     };
 
-    if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>Загрузка курса...</div>;
-    if (!course) return <div style={{ textAlign: 'center', padding: '50px' }}>Курс не найден</div>;
+    if (loading) return <div style={{ textAlign: 'center', padding: 50 }}>Загрузка...</div>;
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-            <button onClick={() => navigate('/profile', { state: { activeTab: 'mycourses' } })} style={{ marginBottom: '20px', padding: '8px 16px', cursor: 'pointer', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '8px' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: 20 }}>
+            <span
+                onClick={() => navigate('/profile', { state: { activeTab: 'mycourses' } })}
+                style={{
+                    display: 'inline-block',
+                    marginBottom: 20,
+                    cursor: 'pointer',
+                    color: '#007bff',
+                    textDecoration: 'underline'
+                }}
+            >
                 ← Назад к моим курсам
-            </button>
+            </span>
 
-            <h1 style={{ marginBottom: '10px' }}>{course.title}</h1>
-            <p style={{ marginBottom: '30px', color: '#666' }}>{course.description}</p>
+            <h1>{courseTitle}</h1>
 
-            {/* Общий прогресс */}
-            <div style={{ backgroundColor: '#f0f7ff', borderRadius: '12px', padding: '20px', marginBottom: '30px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span>Общий прогресс по курсу</span>
-                    <span>{Math.round(topics.reduce((acc, t) => acc + t.progress, 0) / (topics.length || 1))}%</span>
-                </div>
-                <div style={{ width: '100%', height: '12px', backgroundColor: '#e0e0e0', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.round(topics.reduce((acc, t) => acc + t.progress, 0) / (topics.length || 1))}%`, height: '100%', backgroundColor: '#e94560' }} />
-                </div>
+            <div style={{ display: 'flex', gap: '10px', borderBottom: '2px solid #e0e0e0', marginBottom: '30px', flexWrap: 'wrap' }}>
+                <button
+                    onClick={() => setActiveTab('topics')}
+                    style={{
+                        padding: '12px 24px',
+                        backgroundColor: activeTab === 'topics' ? '#e94560' : 'transparent',
+                        color: activeTab === 'topics' ? 'white' : '#333',
+                        border: 'none',
+                        borderRadius: '8px 8px 0 0',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Темы курса
+                </button>
+                <button
+                    onClick={() => setActiveTab('theory')}
+                    style={{
+                        padding: '12px 24px',
+                        backgroundColor: activeTab === 'theory' ? '#e94560' : 'transparent',
+                        color: activeTab === 'theory' ? 'white' : '#333',
+                        border: 'none',
+                        borderRadius: '8px 8px 0 0',
+                        cursor: 'pointer'
+                    }}
+                    disabled={!selectedTopic}
+                >
+                    Теория {selectedTopic ? `: ${selectedTopic.title}` : ''}
+                </button>
             </div>
 
-            {/* Вкладки */}
-            <div style={{ display: 'flex', gap: '10px', borderBottom: '2px solid #e0e0e0', marginBottom: '20px' }}>
-                <button onClick={() => setActiveTab('topics')} style={{ padding: '10px 20px', backgroundColor: activeTab === 'topics' ? '#e94560' : 'transparent', color: activeTab === 'topics' ? 'white' : '#333', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0' }}>Темы курса</button>
-                {selectedTopic && (
-                    <>
-                        <button onClick={() => { setActiveTab('theory'); }} style={{ padding: '10px 20px', backgroundColor: activeTab === 'theory' ? '#e94560' : 'transparent', color: activeTab === 'theory' ? 'white' : '#333', border: 'none', cursor: 'pointer' }}>Теория</button>
-                        <button onClick={() => { setActiveTab('tasks'); }} style={{ padding: '10px 20px', backgroundColor: activeTab === 'tasks' ? '#e94560' : 'transparent', color: activeTab === 'tasks' ? 'white' : '#333', border: 'none', cursor: 'pointer' }}>Задачи</button>
-                    </>
-                )}
-            </div>
-
-            {/* Список тем */}
             {activeTab === 'topics' && (
-                <div style={{ display: 'grid', gap: '15px' }}>
-                    {topics.map(topic => (
-                        <div key={topic.id} onClick={() => selectTopic(topic)} style={{ border: '1px solid #eee', borderRadius: '12px', padding: '20px', backgroundColor: '#f9f9f9', cursor: 'pointer' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <div>
-                                    <strong style={{ fontSize: '18px' }}>{topic.title}</strong>
-                                    <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>{topic.description}</p>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div style={{ width: '100px', height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-                                            <div style={{ width: `${topic.progress}%`, height: '100%', backgroundColor: topic.completed ? '#4CAF50' : '#ffd700' }} />
-                                        </div>
-                                        <span>{topic.progress}%</span>
-                                        {topic.completed && <span style={{ fontSize: '20px' }}>✅</span>}
-                                    </div>
-                                </div>
+                <div>
+                    {topics.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: 50 }}>Нет доступных тем</div>
+                    ) : (
+                        topics.map((topic) => (
+                            <div
+                                key={topic.id}
+                                onClick={() => handleTopicClick(topic)}
+                                style={{
+                                    border: '1px solid #ddd',
+                                    borderRadius: 12,
+                                    padding: 20,
+                                    marginBottom: 16,
+                                    backgroundColor: '#fff',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                    e.currentTarget.style.transform = 'translateX(5px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#fff';
+                                    e.currentTarget.style.transform = 'translateX(0)';
+                                }}
+                            >
+                                <h3>{topic.title}</h3>
+                                <p style={{ color: '#666' }}>{topic.description}</p>
                             </div>
+                        ))
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'theory' && (
+                <div>
+                    {!theoryBlocks || theoryBlocks.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: 50, backgroundColor: '#f9f9f9', borderRadius: 12 }}>
+                            Теория пока не добавлена
                         </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Теория */}
-            {activeTab === 'theory' && selectedTopic && (
-                <div>
-                    <h3 style={{ marginBottom: '15px' }}>Теория: {selectedTopic.title}</h3>
-                    {theoryBlocks.length === 0 ? (
-                        <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Теория пока не добавлена</p>
                     ) : (
-                        theoryBlocks.map(block => (
-                            <div key={block.id} style={{ border: '1px solid #eee', borderRadius: '12px', padding: '20px', marginBottom: '20px', backgroundColor: '#fff' }}>
-                                <h4 style={{ marginBottom: '10px' }}>{block.title}</h4>
-                                <div dangerouslySetInnerHTML={{ __html: block.content }} style={{ lineHeight: 1.6 }} />
-                            </div>
-                        ))
-                    )}
-                </div>
-            )}
-
-            {/* Задачи */}
-            {activeTab === 'tasks' && selectedTopic && (
-                <div>
-                    <h3 style={{ marginBottom: '15px' }}>Задачи: {selectedTopic.title}</h3>
-                    {tasks.length === 0 ? (
-                        <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Задачи пока не добавлены</p>
-                    ) : (
-                        tasks.map(task => (
-                            <div key={task.id} style={{ border: '1px solid #eee', borderRadius: '12px', padding: '20px', marginBottom: '15px', backgroundColor: '#fff' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <span style={{ display: 'inline-block', padding: '2px 8px', backgroundColor: task.type === 'equation' ? '#667eea' : task.type === 'numeric' ? '#4CAF50' : '#ff9800', color: 'white', borderRadius: '20px', fontSize: '12px', marginBottom: '10px' }}>
-                                            {task.type === 'equation' ? 'Уравнение' : task.type === 'numeric' ? 'Числовая задача' : 'Тест'}
-                                        </span>
-                                        <div style={{ fontSize: '16px', marginBottom: '10px' }} dangerouslySetInnerHTML={{ __html: task.question_text }} />
-                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '10px' }}>
-                                            <input type="text" id={`answer-${task.id}`} placeholder="Введите ответ" style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '8px', width: '200px' }} />
-                                            <button onClick={() => {
-                                                const input = document.getElementById(`answer-${task.id}`) as HTMLInputElement;
-                                                handleTaskAnswer(task.id, input.value);
-                                                input.value = '';
-                                            }} style={{ padding: '8px 16px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Проверить</button>
-                                        </div>
-                                    </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <h3>Выберите тему для изучения:</h3>
+                            {theoryBlocks.map((block) => (
+                                <div
+                                    key={block.id}
+                                    onClick={() => openModal(block)}
+                                    style={{
+                                        padding: '15px 20px',
+                                        backgroundColor: '#f0f0f0',
+                                        borderRadius: 10,
+                                        cursor: 'pointer',
+                                        border: '1px solid #ddd',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#e0e0e0';
+                                        e.currentTarget.style.transform = 'translateX(5px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#f0f0f0';
+                                        e.currentTarget.style.transform = 'translateX(0)';
+                                    }}
+                                >
+                                    📖 {block.title}
                                 </div>
-                            </div>
-                        ))
+                            ))}
+                        </div>
                     )}
+                </div>
+            )}
+
+            {isModalOpen && selectedBlock && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: 16,
+                        padding: 30,
+                        maxWidth: 700,
+                        width: '90%',
+                        maxHeight: '80vh',
+                        overflow: 'auto',
+                        position: 'relative'
+                    }}>
+                        <button
+                            onClick={closeModal}
+                            style={{
+                                position: 'absolute',
+                                top: 15,
+                                right: 20,
+                                fontSize: 28,
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#999'
+                            }}
+                        >
+                            ✕
+                        </button>
+
+                        <h2 style={{ marginBottom: 20 }}>{selectedBlock.title}</h2>
+
+                        <div style={{ lineHeight: 1.6, fontSize: '16px' }}>
+                            <MathJax>{selectedBlock.content}</MathJax>
+                        </div>
+
+                        <div style={{ marginTop: 25, textAlign: 'center' }}>
+                            <button
+                                onClick={goToTasks}
+                                style={{
+                                    padding: '10px 30px',
+                                    backgroundColor: '#4CAF50',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Перейти к задачам →
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

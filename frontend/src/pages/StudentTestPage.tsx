@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { MathJax } from 'better-react-mathjax';
 
 interface Question {
     id: number;
@@ -108,7 +109,9 @@ const StudentTestPage: React.FC = () => {
                 {questions.map((q, idx) => (
                     <div key={q.id} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', marginBottom: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                         <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>Вопрос {idx + 1}</div>
-                        <div style={{ marginBottom: '15px' }} dangerouslySetInnerHTML={{ __html: q.text }} />
+                        <div style={{ marginBottom: '15px', fontSize: '16px', lineHeight: '1.5' }}>
+                            <MathJax>{q.text}</MathJax>
+                        </div>
                         <input
                             type="text"
                             placeholder="Введите ответ"
