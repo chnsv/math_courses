@@ -5,50 +5,100 @@ import AuthModal from '../components/AuthModal';
 interface Question {
     id: number;
     text: string;
-    answer: number | string;
+    answer: string;
     userAnswer: string;
     isCorrect: boolean | null;
     type: 'number' | 'string';
     check: (ans: string) => boolean;
 }
 
+// Функции для нормализации ответов
+const normalizeAnswer = (ans: string): string => {
+    return ans
+        .toLowerCase()
+        .replace(/\s/g, '')
+        .replace(/π/g, 'pi')
+        .replace(/pi/g, 'pi')
+        .replace(/\+/g, '+')
+        .replace(/\*/g, '*')
+        .replace(/e\^x/g, 'e^x');
+};
+
+// Проверка эквивалентности выражений
+const areEquivalent = (user: string, correct: string): boolean => {
+    const normUser = normalizeAnswer(user);
+    const normCorrect = normalizeAnswer(correct);
+
+    // Прямое сравнение
+    if (normUser === normCorrect) return true;
+
+    // Проверка для производной e^x sin x
+    if (normCorrect === 'e^x(sinx+cosx)') {
+        const variants = [
+            'e^xsinx+e^xcosx',
+            'e^x(sinx+cosx)',
+            'e^x*sinx+e^x*cosx',
+            'e^x(sinx+cosx)',
+            '(e^x)(sinx+cosx)'
+        ];
+        if (variants.some(v => normUser === v)) return true;
+    }
+
+    // Проверка для уравнения cos x = -1
+    if (normCorrect === 'pi') {
+        const variants = [
+            'pi', 'π', '180°', '180', 'pi+2pik', 'π+2πk',
+            'pi+2pi*k', 'π+2πk', '180+360k', 'pi+2pik'
+        ];
+        if (variants.some(v => normUser === v)) return true;
+    }
+
+    // Проверка для ответов с pi
+    if (normCorrect.includes('pi') && normUser.includes('pi')) {
+        const simplifyPi = (s: string) => s.replace(/pi/gi, 'π').replace(/\*/g, '');
+        if (simplifyPi(normUser) === simplifyPi(normCorrect)) return true;
+    }
+
+    return false;
+};
+
 // Реальные варианты заданий для ЕГЭ (базовый уровень)
 const baseVariants: Record<string, Question[]> = {
     base: [
-        { id: 1, text: 'Решите уравнение: √(x + 5) = 7', answer: 44, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 44 },
-        { id: 2, text: 'Найдите значение: 5!', answer: 120, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 120 },
-        { id: 3, text: 'Решите неравенство: 3x - 7 > 11', answer: 6, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) > 6 },
-        { id: 4, text: 'Найдите значение: log₂ 16', answer: 4, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 4 },
-        { id: 5, text: 'Вычислите: 3² × 3³', answer: 243, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 243 },
-        { id: 6, text: 'Найдите корень: √121', answer: 11, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 11 },
-        { id: 7, text: 'Решите: 2^x = 32', answer: 5, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 5 },
-        { id: 8, text: 'Найдите значение: sin 90°', answer: 1, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 1) < 0.01 },
-        { id: 9, text: 'Вычислите: log₅ 125', answer: 3, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 3 },
-        { id: 10, text: 'Найдите значение выражения: 7! / 5!', answer: 42, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 42 },
+        { id: 1, text: 'Решите уравнение: √(x + 5) = 7', answer: '44', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 44) < 0.01 },
+        { id: 2, text: 'Найдите значение: 5!', answer: '120', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 120) < 0.01 },
+        { id: 3, text: 'Решите неравенство: 3x - 7 > 11', answer: '6', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) > 6 },
+        { id: 4, text: 'Найдите значение: log₂ 16', answer: '4', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 4) < 0.01 },
+        { id: 5, text: 'Вычислите: 3² × 3³', answer: '243', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 243) < 0.01 },
+        { id: 6, text: 'Найдите корень: √121', answer: '11', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 11) < 0.01 },
+        { id: 7, text: 'Решите: 2^x = 32', answer: '5', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 5) < 0.01 },
+        { id: 8, text: 'Найдите значение: sin 90°', answer: '1', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 1) < 0.01 },
+        { id: 9, text: 'Вычислите: log₅ 125', answer: '3', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 3) < 0.01 },
+        { id: 10, text: 'Найдите значение выражения: 7! / 5!', answer: '42', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 42) < 0.01 },
     ],
     profile1: [
-        { id: 1, text: 'Найдите производную: f(x) = 3x⁴ + 2x³ - x', answer: '12x³ + 6x² - 1', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => ans.replace(/\s/g, '') === '12x³+6x²-1' },
-        { id: 2, text: 'Решите уравнение: log₂(x) + log₂(x - 2) = 3', answer: '4', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 4 },
-        { id: 3, text: 'Найдите предел: lim(x→0) sin x / x', answer: 1, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 1 },
-        { id: 4, text: 'Вычислите интеграл: ∫(2x) dx от 0 до 3', answer: 9, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 9 },
+        { id: 1, text: 'Найдите производную: f(x) = 3x⁴ + 2x³ - x', answer: '12x³ + 6x² - 1', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => areEquivalent(ans, '12x³+6x²-1') },
+        { id: 2, text: 'Решите уравнение: log₂(x) + log₂(x - 2) = 3', answer: '4', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 4) < 0.01 },
+        { id: 3, text: 'Найдите предел: lim(x→0) sin x / x', answer: '1', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 1) < 0.01 },
+        { id: 4, text: 'Вычислите интеграл: ∫(2x) dx от 0 до 3', answer: '9', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 9) < 0.01 },
         { id: 5, text: 'Найдите точку экстремума: f(x) = x³ - 3x', answer: '-1,1', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => { const vals = ans.split(',').map(Number).sort(); return vals[0] === -1 && vals[1] === 1; } },
         { id: 6, text: 'Решите уравнение: sin x = 0.5 на [0, π]', answer: '30°,150°', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => ans.includes('30') && ans.includes('150') },
-        { id: 7, text: 'Найдите: arctan(1)', answer: 45, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 45 },
-        { id: 8, text: 'Вычислите: e^0', answer: 1, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 1 },
-        { id: 9, text: 'Решите: 5^(x+1) = 125', answer: 2, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 2 },
-        { id: 10, text: 'Найдите значение: ∫(1/x) dx от 1 до e', answer: 1, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 1) < 0.01 },
+        { id: 7, text: 'Найдите: arctan(1)', answer: '45', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 45) < 0.01 || ans === 'π/4' || ans === 'pi/4' },
+        { id: 8, text: 'Вычислите: e^0', answer: '1', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 1) < 0.01 },
+        { id: 9, text: 'Решите: 5^(x+1) = 125', answer: '2', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 2) < 0.01 },
+        { id: 10, text: 'Найдите значение: ∫(1/x) dx от 1 до e', answer: '1', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 1) < 0.01 },
     ],
     profile2: [
-        { id: 1, text: 'Найдите производную: f(x) = e^x sin x', answer: 'e^x(sin x + cos x)', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => ans.replace(/\s/g, '').toLowerCase().includes('e^x(sinx+cosx)') },
-        { id: 2, text: 'Решите уравнение: 2^(x+1) = 16', answer: 3, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 3 },
+        { id: 1, text: 'Найдите производную: f(x) = e^x sin x', answer: 'e^x(sin x + cos x)', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => areEquivalent(ans, 'e^x(sinx+cosx)') },
+        { id: 2, text: 'Решите уравнение: 2^(x+1) = 16', answer: '3', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 3) < 0.01 },
         { id: 3, text: 'Найдите предел: lim(x→∞) (1 + 1/x)^x', answer: 'e', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => ans.toLowerCase() === 'e' },
-        { id: 4, text: 'Вычислите: ∫ sin x dx от 0 до π', answer: 2, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 2) < 0.01 },
-        { id: 5, text: 'Найдите точку минимума: f(x) = x² + 4x + 3', answer: '-2', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === -2 },
-        { id: 6, text: 'Решите уравнение: cos x = -1', answer: 'π', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => ans.toLowerCase().includes('π') || ans === '180' },
-        { id: 7, text: 'Найдите: log₃ 81', answer: 4, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 4 },
-        { id: 8, text: 'Вычислите: (2 + i)(2 - i)', answer: 5, userAnswer: '', isCorrect: null, type: 'number', check: (ans) => parseFloat(ans) === 5 },
+        { id: 4, text: 'Вычислите: ∫ sin x dx от 0 до π', answer: '2', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 2) < 0.01 },
+        { id: 5, text: 'Найдите точку минимума: f(x) = x² + 4x + 3', answer: '-2', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) + 2) < 0.01 },
+        { id: 6, text: 'Решите уравнение: cos x = -1', answer: 'π', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => areEquivalent(ans, 'pi') },
+        { id: 7, text: 'Найдите: log₃ 81', answer: '4', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 4) < 0.01 },
+        { id: 8, text: 'Вычислите: (2 + i)(2 - i)', answer: '5', userAnswer: '', isCorrect: null, type: 'number', check: (ans) => Math.abs(parseFloat(ans) - 5) < 0.01 },
         { id: 9, text: 'Решите уравнение: |x - 3| = 5', answer: '-2,8', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => { const vals = ans.split(',').map(Number).sort(); return vals[0] === -2 && vals[1] === 8; } },
-        { id: 10, text: 'Найдите площадь фигуры под графиком y = x² от 0 до 2', answer: '8/3', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => Math.abs(parseFloat(ans) - 2.666) < 0.01 },
+        { id: 10, text: 'Найдите площадь фигуры под графиком y = x² от 0 до 2', answer: '8/3', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => Math.abs(parseFloat(ans) - 2.666) < 0.01 || parseFloat(ans) === 8/3 },
     ],
 };
 
@@ -136,7 +186,7 @@ const TrialEGEPage: React.FC = () => {
                 color: '#1a1a2e',
                 marginBottom: '40px'
             }}>
-                <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Пробники ЕГЭ</h1>
+                <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>📝 Пробники ЕГЭ</h1>
                 <p style={{ fontSize: '20px', maxWidth: '700px', margin: '0 auto', opacity: 0.9 }}>
                     Профильная и базовая математика — решайте варианты как на реальном экзамене
                 </p>
@@ -200,7 +250,7 @@ const TrialEGEPage: React.FC = () => {
                     </div>
 
                     <div style={{ marginBottom: '40px' }}>
-                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>✨ Наши преимущества</h2>
+                        <h2 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>Наши преимущества</h2>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                             <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '16px' }}>
                                 <div style={{ fontSize: '36px', marginBottom: '10px' }}>🎯</div>

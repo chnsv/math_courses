@@ -36,8 +36,11 @@ class TestAssignment(Base):
     status = Column(String, default="pending")
     score = Column(Integer, default=0)
     generated_params = Column(Text, nullable=True)
+    generated_questions = Column(Text, nullable=True)
+    answers = Column(Text, nullable=True)
     assigned_at = Column(DateTime, default=datetime.now)
     completed_at = Column(DateTime, nullable=True)
+
 class TestAnswer(Base):
     __tablename__ = "test_answers"
 

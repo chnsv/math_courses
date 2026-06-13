@@ -62,7 +62,7 @@ function AppRoutes() {
             <Route path="/admin/course/:courseId/topic/:topicId" element={<PrivateRoute><TopicManagementPage /></PrivateRoute>} />
 
             <Route path="/student/course/:courseId" element={<PrivateRoute><StudentCoursePage /></PrivateRoute>} />
-            <Route path="/student/test/:testId/assignment/:assignmentId" element={<PrivateRoute><StudentTestPage /></PrivateRoute>} />
+            <Route path="/test/:assignmentId" element={<StudentTestPage />} />
         </Routes>
     );
 }

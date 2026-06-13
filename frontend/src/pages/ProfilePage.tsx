@@ -392,8 +392,10 @@ const ProfilePage: React.FC = () => {
     };
 
     const loadMyTests = async () => {
+        if (!user) return;
         try {
-            const response = await api.get('/teacher/my-tests');
+            const response = await api.get(`/teacher/tests/student/${user.id}/assigned`);
+            console.log('Загруженные тесты:', response.data);
             setStudentTests(response.data);
         } catch (error) {
             console.error('Ошибка загрузки тестов:', error);
@@ -930,7 +932,7 @@ const ProfilePage: React.FC = () => {
                                         ⏱️ {test.duration_minutes} минут • Статус: {test.status === 'pending' ? 'Ожидает' : 'В процессе'}
                                     </p>
                                     <button
-                                        onClick={() => navigate(`/student/test/${test.id}/assignment/${test.assignment_id}`)}
+                                        onClick={() => navigate(`/test/${test.id}`)}
                                         style={{
                                             padding: '8px 20px',
                                             backgroundColor: '#e94560',

@@ -63,12 +63,14 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
     const [studentsStats, setStudentsStats] = useState<any[]>([]);
     const [loadingStats, setLoadingStats] = useState(false);
     const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+    const [theoryBlocksWithCount, setTheoryBlocksWithCount] = useState<any[]>([]);
 
     useEffect(() => {
         loadTopics();
         loadTests();
         loadCourseStudentsList();
         loadStudentsStats();
+        loadTheoryBlocksWithCount();
     }, []);
 
     const decodeHtmlEntities = (text: string) => {
@@ -136,22 +138,44 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
         }
     };
 
+    const loadTheoryBlocksWithCount = async () => {
+        try {
+            const response = await api.get('/teacher/theory-blocks');
+            console.log('Подтемы с шаблонами:', response.data);
+            setTheoryBlocksWithCount(response.data);
+        } catch (error) {
+            console.error('Ошибка загрузки подтем:', error);
+        }
+    };
+
     const assignTestToStudents = async () => {
         if (!selectedTestForAssign) return;
         if (selectedStudents.length === 0) {
             alert('Выберите хотя бы одного ученика');
             return;
         }
+
+        setLoading(true);
         try {
             await api.post(`/teacher/tests/${selectedTestForAssign.id}/assign`, {
                 student_ids: selectedStudents
             });
-            alert('Тест назначен ученикам');
+
+            for (const studentId of selectedStudents) {
+                await api.post(`/teacher/tests/${selectedTestForAssign.id}/generate-for-student/${studentId}`);
+            }
+
+            alert(`Тест назначен ${selectedStudents.length} ученикам. Варианты сгенерированы.`);
+
             setShowAssignModal(false);
             setSelectedStudents([]);
             setSelectedTestForAssign(null);
-        } catch (error) {
-            alert('Ошибка назначения');
+            loadTests();
+        } catch (error: any) {
+            console.error('Ошибка назначения:', error);
+            alert(error.response?.data?.detail || 'Ошибка назначения');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -298,6 +322,10 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
 
             console.log('Тест создан:', response.data);
 
+            const questionsCount = response.data.questions_count || 0;
+
+            alert(`Контрольная работа создана!\nКоличество вопросов: ${questionsCount}\n\nДля назначения ученикам нажмите кнопку "Назначить" рядом с тестом.`);
+
             setShowAddTestModal(false);
             setNewTest({
                 title: '',
@@ -306,8 +334,6 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                 selectedTheoryBlocks: []
             });
             await loadTests();
-            alert('Контрольная работа создана! Количество вопросов: ' +
-                  (response.data.questions_count || 'неизвестно'));
         } catch (error: any) {
             console.error('Ошибка создания:', error);
             alert(error.response?.data?.detail || 'Ошибка создания');
@@ -830,41 +856,115 @@ const TeacherCourseManager: React.FC<TeacherCourseManagerProps> = ({ course, onC
                                 <button onClick={() => setShowAddTestModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>✕</button>
                             </div>
 
-                            <input type="text" placeholder="Название" value={newTest.title} onChange={(e) => setNewTest({ ...newTest, title: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <input
+                                type="text"
+                                placeholder="Название"
+                                value={newTest.title}
+                                onChange={(e) => setNewTest({ ...newTest, title: e.target.value })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
 
-                            <textarea placeholder="Описание" value={newTest.description} onChange={(e) => setNewTest({ ...newTest, description: e.target.value })} rows={3} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <textarea
+                                placeholder="Описание"
+                                value={newTest.description}
+                                onChange={(e) => setNewTest({ ...newTest, description: e.target.value })}
+                                rows={3}
+                                style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
 
-                            <input type="number" placeholder="Длительность (минуты)" value={newTest.duration_minutes} onChange={(e) => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) })} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }} />
+                            <input
+                                type="number"
+                                placeholder="Длительность (минуты)"
+                                value={newTest.duration_minutes}
+                                onChange={(e) => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) })}
+                                style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '8px' }}
+                            />
 
                             <h4 style={{ marginBottom: '10px' }}>Выберите подтемы для контрольной работы</h4>
                             <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }}>
-                                {theoryBlocks.map(block => (
-                                    <label key={block.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderBottom: '1px solid #eee', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={newTest.selectedTheoryBlocks?.includes(block.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setNewTest({
-                                                        ...newTest,
-                                                        selectedTheoryBlocks: [...(newTest.selectedTheoryBlocks || []), block.id]
-                                                    });
-                                                } else {
-                                                    setNewTest({
-                                                        ...newTest,
-                                                        selectedTheoryBlocks: (newTest.selectedTheoryBlocks || []).filter(id => id !== block.id)
-                                                    });
-                                                }
+                                {theoryBlocksWithCount.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: '#666' }}>Загрузка подтем...</p>
+                                ) : (
+                                    theoryBlocksWithCount.map(block => (
+                                        <label
+                                            key={block.id}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                padding: '10px',
+                                                borderBottom: '1px solid #eee',
+                                                cursor: block.template_count > 0 ? 'pointer' : 'not-allowed',
+                                                opacity: block.template_count > 0 ? 1 : 0.5
                                             }}
-                                        />
-                                        <span>{block.title}</span>
-                                    </label>
-                                ))}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={newTest.selectedTheoryBlocks?.includes(block.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setNewTest({
+                                                            ...newTest,
+                                                            selectedTheoryBlocks: [...(newTest.selectedTheoryBlocks || []), block.id]
+                                                        });
+                                                    } else {
+                                                        setNewTest({
+                                                            ...newTest,
+                                                            selectedTheoryBlocks: (newTest.selectedTheoryBlocks || []).filter(id => id !== block.id)
+                                                        });
+                                                    }
+                                                }}
+                                                disabled={block.template_count === 0}
+                                            />
+                                            <div style={{ flex: 1 }}>
+                                                <span>{block.title}</span>
+                                                {block.template_count > 0 && (
+                                                    <span style={{ marginLeft: '10px', color: '#4CAF50', fontSize: '12px' }}>
+                                                        ({block.template_count} заданий)
+                                                    </span>
+                                                )}
+                                                {block.template_count === 0 && (
+                                                    <span style={{ marginLeft: '10px', color: '#e94560', fontSize: '12px' }}>
+                                                        (нет заданий)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </label>
+                                    ))
+                                )}
                             </div>
+
+                            {/* Показываем информацию о выбранных заданиях */}
+                            {newTest.selectedTheoryBlocks && newTest.selectedTheoryBlocks.length > 0 && (
+                                <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#e3f2fd', borderRadius: '8px' }}>
+                                    <strong>Выбрано подтем:</strong> {newTest.selectedTheoryBlocks.length}
+                                    <br />
+                                    <strong>Всего заданий:</strong> {
+                                        newTest.selectedTheoryBlocks.reduce((total, blockId) => {
+                                            const block = theoryBlocksWithCount.find((b: any) => b.id === blockId);
+                                            return total + (block?.template_count || 0);
+                                        }, 0)
+                                    }
+                                </div>
+                            )}
 
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
                                 <button onClick={() => setShowAddTestModal(false)} style={{ padding: '8px 16px', backgroundColor: '#ccc', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
-                                <button onClick={addTest} style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Создать</button>
+                                <button
+                                    onClick={addTest}
+                                    disabled={loading || !newTest.title || !newTest.selectedTheoryBlocks?.length}
+                                    style={{
+                                        padding: '8px 16px',
+                                        backgroundColor: '#4CAF50',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        cursor: (loading || !newTest.title || !newTest.selectedTheoryBlocks?.length) ? 'not-allowed' : 'pointer',
+                                        opacity: (loading || !newTest.title || !newTest.selectedTheoryBlocks?.length) ? 0.7 : 1
+                                    }}
+                                >
+                                    {loading ? 'Создание...' : 'Создать'}
+                                </button>
                             </div>
                         </div>
                     </div>
