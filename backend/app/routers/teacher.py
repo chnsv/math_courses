@@ -12,6 +12,67 @@ from datetime import datetime
 
 router = APIRouter()
 
+
+def check_answer_equivalence(user_answer: str, correct_answer: str) -> bool:
+    try:
+        from sympy import simplify, sympify, Rational, nsimplify, Eq, solve, Symbol
+        import re
+
+        user_answer = user_answer.strip().lower()
+        correct_answer = str(correct_answer).strip().lower()
+
+        if user_answer == correct_answer:
+            return True
+
+        user_clean = re.sub(r'\s+', '', user_answer)
+        correct_clean = re.sub(r'\s+', '', correct_answer)
+
+        if user_clean == correct_clean:
+            return True
+
+        try:
+            user_expr_str = user_clean.replace('^', '**')
+            correct_expr_str = correct_clean.replace('^', '**')
+
+            if 'x=' in user_expr_str:
+                user_expr_str = user_expr_str.split('x=')[1]
+            if 'x=' in correct_expr_str:
+                correct_expr_str = correct_expr_str.split('x=')[1]
+
+            user_expr = sympify(user_expr_str)
+            correct_expr = sympify(correct_expr_str)
+
+            diff = simplify(user_expr - correct_expr)
+            if diff == 0:
+                return True
+
+        except:
+            pass
+
+        try:
+            from fractions import Fraction
+
+            user_frac = Fraction(user_answer)
+            correct_frac = Fraction(correct_answer)
+            if user_frac == correct_frac:
+                return True
+        except:
+            pass
+
+        try:
+            user_float = float(user_answer)
+            correct_float = float(correct_answer)
+            if abs(user_float - correct_float) < 1e-6:
+                return True
+        except:
+            pass
+
+        return False
+
+    except Exception as e:
+        print(f"Ошибка в check_answer_equivalence: {e}")
+        return user_answer.strip() == correct_answer
+
 def generate_question_from_template(template, parameters: dict = None):
     question_text = template.template_text
     answer_template = template.answer_template
@@ -711,10 +772,39 @@ def generate_test_for_student(
 
         correct_answer = answer_template
         try:
-            if answer_template:
-                correct_answer = str(eval(answer_template))
-        except:
-            pass
+            from sympy import sympify, simplify, Rational, nsimplify, latex
+            expr = sympify(answer_template)
+
+            expr = simplify(expr)
+
+            if expr.is_Rational:
+                frac = Rational(expr)
+                correct_answer = str(frac)
+            elif expr.is_number:
+                correct_answer = str(expr.evalf())
+            else:
+                correct_answer = str(expr)
+
+            if 'x' in str(expr):
+                from sympy import solve, Symbol, Eq
+                x = Symbol('x')
+                if '=' in answer_template:
+                    try:
+                        left, right = answer_template.split('=')
+                        equation = Eq(sympify(left), sympify(right))
+                        solutions = solve(equation, x)
+                        if solutions:
+                            sol = solutions[0]
+                            if sol.is_Rational:
+                                correct_answer = str(sol)
+                            else:
+                                correct_answer = str(sol.evalf())
+                    except:
+                        pass
+
+        except Exception as e:
+            print(f"SymPy ошибка для {answer_template}: {e}")
+            correct_answer = answer_template
 
         generated_questions.append({
             "id": tq.id,
@@ -846,13 +936,9 @@ def submit_test_answers(
         user_answer = answers.get(str(q["id"]), "")
         correct_answer = q["correct_answer"]
 
-        user_answer_norm = str(user_answer).strip().lower()
-        correct_answer_norm = str(correct_answer).strip().lower()
+        is_correct = check_answer_equivalence(user_answer, correct_answer)
 
-        user_answer_norm = re.sub(r'\s+', '', user_answer_norm)
-        correct_answer_norm = re.sub(r'\s+', '', correct_answer_norm)
-
-        is_correct = user_answer_norm == correct_answer_norm
+        print(f"Вопрос {q['id']}: ответ='{user_answer}', правильный='{correct_answer}', верно={is_correct}")
 
         if is_correct:
             score += 1
