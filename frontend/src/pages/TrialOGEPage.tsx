@@ -12,7 +12,6 @@ interface Question {
     check: (ans: string) => boolean;
 }
 
-// Реальные варианты заданий ОГЭ
 const variantsQuestions: Record<number, Question[]> = {
     1: [
         { id: 1, text: 'Решите уравнение: 2x² - 5x + 2 = 0', answer: '0.5, 2', userAnswer: '', isCorrect: null, type: 'string', check: (ans) => {

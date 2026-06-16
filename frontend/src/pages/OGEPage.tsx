@@ -74,7 +74,6 @@ const OGEPage: React.FC = () => {
                 <p>Результат — «5»! Точно знаем, как устроен экзамен</p>
             </div>
 
-            {/* Шкала оценок */}
             <div style={{ marginBottom: '40px', padding: '30px', backgroundColor: '#f8f9fa', borderRadius: '24px' }}>
                 <h2 style={{ textAlign: 'center' }}>Шкала перевода баллов ОГЭ</h2>
                 <div style={{ display: 'flex', margin: '20px 0', height: '40px', borderRadius: '20px', overflow: 'hidden' }}>
@@ -85,7 +84,6 @@ const OGEPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Задания из ОГЭ */}
             <div style={{ marginBottom: '40px' }}>
                 <h2 style={{ textAlign: 'center' }}>Попробуйте задания из ОГЭ</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
@@ -103,7 +101,7 @@ const OGEPage: React.FC = () => {
                                 style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', width: '100%', marginBottom: '10px' }}
                             />
                             <button onClick={() => checkAnswer(q.id)} style={{ padding: '8px 16px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Проверить</button>
-                            {results[q.id] !== null && <div style={{ marginTop: '10px', color: results[q.id] ? '#4CAF50' : '#ff6b6b' }}>{results[q.id] ? '✓ Правильно!' : '✗ Неверно'}</div>}
+                            {results[q.id] !== null && <div style={{ marginTop: '10px', color: results[q.id] ? '#4CAF50' : '#ff6b6b' }}>{results[q.id] ? 'Правильно!' : 'Неверно'}</div>}
                         </div>
                     ))}
                 </div>
